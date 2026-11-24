@@ -52,8 +52,10 @@ describe("LoginPage", () => {
 
     expect(await screen.findByText(/regional hazard monitor/i)).toBeInTheDocument();
     expect(screen.getByText(/sdrf ground unit 04/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /sign out/i }));
+    await user.click(screen.getByRole("link", { name: /open profile and settings/i }));
+    await user.click(screen.getByRole("button", { name: /sign out of session/i }));
     expect(await screen.findByRole("heading", { name: /^sign in$/i })).toBeInTheDocument();
   });
 });

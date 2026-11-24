@@ -74,7 +74,7 @@ export function LoginPage() {
           <img
             src="/hima-rakshak-logo.png"
             alt="HIMA-RAKSHAK Logo"
-            className="w-10 h-10 rounded-lg object-contain shrink-0"
+            className="h-14 w-auto rounded-lg object-contain shrink-0"
           />
           <div>
             <p className="text-sm font-bold text-text-primary tracking-tight">HIMA-RAKSHAK</p>
