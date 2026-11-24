@@ -53,6 +53,6 @@ describe("LoginPage", () => {
     expect(await screen.findByText(/welcome, sub-inspector r\. ahmed/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /sign out/i }));
-    expect(await screen.findByText(/sign in to operations console/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^sign in$/i })).toBeInTheDocument();
   });
 });

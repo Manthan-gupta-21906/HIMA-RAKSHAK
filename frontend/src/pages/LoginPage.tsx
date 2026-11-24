@@ -84,15 +84,9 @@ export function LoginPage() {
       <main className="max-w-md w-full mx-auto my-8">
         <div className="bg-surface-card border border-border-hairline rounded p-6 sm:p-8 shadow-sm">
           <div className="mb-6 pb-4 border-b border-border-hairline">
-            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-              Authorized Control Access
-            </span>
-            <h1 className="text-2xl font-semibold text-text-primary tracking-tight mt-1">
-              Sign in to Operations Console
+            <h1 className="text-2xl font-semibold text-text-primary tracking-tight">
+              Sign in
             </h1>
-            <p className="text-xs text-on-surface-variant mt-1">
-              Access flood and avalanche risk intelligence for Jammu &amp; Kashmir sectors.
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
