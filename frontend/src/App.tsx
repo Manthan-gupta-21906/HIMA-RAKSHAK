@@ -1,27 +1,90 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Button } from "./components/ui/Button";
+import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { LoginPage } from "./pages/LoginPage";
+import { OverviewPage } from "./pages/OverviewPage";
 
-function ProtectedPlaceholder() {
-  const { user, logout } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+function ProtectedRoutes() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
-    <main className="min-h-screen bg-surface-canvas flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-surface-card border border-border-hairline rounded p-6 flex flex-col gap-4">
-        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-          Session Active • {user.role}
-        </span>
-        <h1 className="text-xl font-semibold text-text-primary">Welcome, {user.name}</h1>
-        <p className="text-xs text-on-surface-variant">
-          {user.station} ({user.district}) — {user.email}
-        </p>
-        <Button variant="secondary" onClick={logout}>
-          Sign Out
-        </Button>
-      </div>
-    </main>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route path="/" element={<OverviewPage />} />
+        <Route
+          path="/map"
+          element={
+            <ComingSoonPage
+              phase="Phase 3"
+              title="Interactive Multi-Hazard Map"
+              description="Leaflet map with J&K sector markers and hazard filters."
+            />
+          }
+        />
+        <Route
+          path="/locations/:id"
+          element={
+            <ComingSoonPage
+              phase="Phase 4"
+              title="Location Risk & Exposure Details"
+              description="Independent Flood and Avalanche assessments, confidence, and exposure."
+            />
+          }
+        />
+        <Route
+          path="/field-log"
+          element={
+            <ComingSoonPage
+              phase="Phase 5"
+              title="Field Observation Form"
+              description="FORM OPS-JK-449 field telemetry submission and validation."
+            />
+          }
+        />
+        <Route
+          path="/warnings"
+          element={
+            <ComingSoonPage
+              phase="Phase 6"
+              title="Official Warnings"
+              description="Authoritative IMD, CWC, and DGRE read-only bulletins."
+            />
+          }
+        />
+        <Route
+          path="/sources"
+          element={
+            <ComingSoonPage
+              phase="Phase 7"
+              title="Data Source Status"
+              description="Agency telemetry sync status, latency, and freshness monitoring."
+            />
+          }
+        />
+        <Route
+          path="/replay"
+          element={
+            <ComingSoonPage
+              phase="Phase 8"
+              title="Historical Event Replay"
+              description="Timeline playback and system loading/empty edge states."
+            />
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ComingSoonPage
+              phase="Phase 9"
+              title="Profile & Settings"
+              description="Operator profile and control-room alert preferences."
+            />
+          }
+        />
+      </Route>
+    </Routes>
   );
 }
 
@@ -36,7 +99,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<PublicOnlyLogin />} />
-          <Route path="/*" element={<ProtectedPlaceholder />} />
+          <Route path="/*" element={<ProtectedRoutes />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
