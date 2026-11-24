@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import type { UserRole } from "../types/auth";
@@ -80,7 +79,6 @@ export function LoginPage() {
             </p>
           </div>
         </div>
-        <Badge tone="neutral">Prototype</Badge>
       </header>
 
       <main className="max-w-md w-full mx-auto my-8">
@@ -183,30 +181,22 @@ export function LoginPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-3 pt-2">
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 <span className="material-symbols-outlined text-[16px]">login</span>
                 <span>{isSubmitting ? "Signing in..." : "Sign In"}</span>
               </Button>
-              <Button type="button" variant="secondary" onClick={fillDemoCredentials} className="w-full">
-                Use Demo Credentials
-              </Button>
-            </div>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-border-hairline flex flex-col gap-2">
-            <div className="flex items-center justify-between text-[11px] text-text-muted">
-              <span>Authoritative Feeds</span>
-              <div className="flex items-center gap-1.5">
-                <Badge tone="imd" showDot>IMD</Badge>
-                <Badge tone="cwc" showDot>CWC</Badge>
-                <Badge tone="dgre" showDot>DGRE</Badge>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={fillDemoCredentials}
+                  className="text-xs font-semibold text-on-surface-variant hover:text-text-primary underline underline-offset-4 cursor-pointer"
+                >
+                  Use Demo Credentials
+                </button>
               </div>
             </div>
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              Decision-support prototype only. Official agency bulletins remain authoritative.
-            </p>
-          </div>
+          </form>
         </div>
       </main>
 
