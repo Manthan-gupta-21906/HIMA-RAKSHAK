@@ -1,0 +1,7 @@
+observation_id,location_id,observed_at,metric,value,unit
+obs-demo-001,JK-SGR-01,2026-11-25T00:00:00Z,rain_mm,24.5,mm
+obs-demo-002,JK-SGR-01,2026-11-25T00:00:00Z,river_level_m,3.8,m
+obs-demo-003,UK-JSH-01,2026-11-25T00:00:00Z,rain_mm,31.2,mm
+obs-demo-004,LA-DRS-01,2026-11-25T00:00:00Z,snow_depth_cm,85.0,cm
+obs-demo-005,LA-DRS-01,2026-11-25T00:00:00Z,temp_c,-6.5,C
+obs-demo-006,LA-DRS-01,2026-11-25T00:00:00Z,wind_kmh,42.0,km/h
