@@ -7,6 +7,7 @@ import { FieldObservationPage } from "./pages/FieldObservationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
+import { SourcesPage } from "./pages/SourcesPage";
 import { WarningsPage } from "./pages/WarningsPage";
 
 function ProtectedRoutes() {
@@ -21,16 +22,7 @@ function ProtectedRoutes() {
         <Route path="/locations/:id" element={<LocationDetailPage />} />
         <Route path="/field-log" element={<FieldObservationPage />} />
         <Route path="/warnings" element={<WarningsPage />} />
-        <Route
-          path="/sources"
-          element={
-            <ComingSoonPage
-              phase="Phase 7"
-              title="Data Source Status"
-              description="Agency telemetry sync status, latency, and freshness monitoring."
-            />
-          }
-        />
+        <Route path="/sources" element={<SourcesPage />} />
         <Route
           path="/replay"
           element={
