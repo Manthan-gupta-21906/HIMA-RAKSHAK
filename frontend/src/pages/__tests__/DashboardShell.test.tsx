@@ -36,7 +36,8 @@ describe("DashboardShell & OverviewPage", () => {
     render(<App />);
 
     await user.click(screen.getByRole("link", { name: /field log/i }));
-    expect(await screen.findByText("Field Observation Form")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /log field observation/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/target sector/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /open navigation menu/i }));
     expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeInTheDocument();

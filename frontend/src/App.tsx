@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { LocationDetailPage } from "./pages/LocationDetailPage";
+import { FieldObservationPage } from "./pages/FieldObservationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
@@ -17,16 +18,7 @@ function ProtectedRoutes() {
         <Route path="/" element={<OverviewPage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/locations/:id" element={<LocationDetailPage />} />
-        <Route
-          path="/field-log"
-          element={
-            <ComingSoonPage
-              phase="Phase 5"
-              title="Field Observation Form"
-              description="FORM OPS-JK-449 field telemetry submission and validation."
-            />
-          }
-        />
+        <Route path="/field-log" element={<FieldObservationPage />} />
         <Route
           path="/warnings"
           element={
