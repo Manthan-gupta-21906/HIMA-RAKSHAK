@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
     log_level: str = "INFO"
+    database_url: str = "sqlite:///./hima_rakshak.db"
 
     model_config = SettingsConfigDict(
         env_file=".env",
