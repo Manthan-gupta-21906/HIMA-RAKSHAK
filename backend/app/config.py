@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     log_level: str = "INFO"
     database_url: str = "sqlite:///./hima_rakshak.db"
+    jwt_secret_key: str = "change-me-in-local-env"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
 
     model_config = SettingsConfigDict(
         env_file=".env",

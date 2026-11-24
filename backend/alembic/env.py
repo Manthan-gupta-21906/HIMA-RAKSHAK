@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.db.base import Base
 from app.models.location import LocationModel  # noqa: F401
 from app.models.source import SourceModel  # noqa: F401
+from app.models.user import UserModel  # noqa: F401
 
 config = context.config
 if not config.get_main_option("sqlalchemy.url"):
