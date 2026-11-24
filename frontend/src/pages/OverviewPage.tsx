@@ -1,9 +1,22 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "../components/ui/Badge";
+import { PageSkeleton } from "../components/ui/PageSkeleton";
 import { MOCK_SECTORS, REGIONAL_KPIS } from "../data/mockSectors";
 
 /** Regional Hazard Monitor overview matching Stitch main_dashboard_map_priority_list. */
 export function OverviewPage() {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    window.setTimeout(() => setIsRefreshing(false), 350);
+  };
+
+  if (isRefreshing) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
@@ -24,12 +37,20 @@ export function OverviewPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-border-hairline text-xs">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-border-hairline text-xs">
             <span className="material-symbols-outlined text-[16px] text-agency-dgre">warning</span>
             <span className="font-medium text-text-primary">47/48 Stations Synced</span>
             <span className="text-border-hairline">•</span>
             <span className="font-semibold text-agency-dgre">1 Delayed</span>
           </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-text-primary text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Refresh</span>
+          </button>
           <Link
             to="/sources"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-text-primary text-xs font-semibold transition-colors"

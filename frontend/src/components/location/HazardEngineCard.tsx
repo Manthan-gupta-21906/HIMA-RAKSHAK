@@ -33,7 +33,7 @@ const PROGRESS_CLASSES: Record<ProgressTone, string> = {
 const NOTE_CLASSES: Record<EngineTone, string> = {
   critical: "bg-error-container/60 border-emergency-red/30 text-on-error-container",
   emergency: "bg-error-container/60 border-emergency-red/30 text-on-error-container",
-  warning: "bg-amber-50 border-hazard-yellow/70 text-amber-900",
+  warning: "bg-amber-50 dark:bg-amber-950/40 border-hazard-yellow/70 text-amber-900 dark:text-amber-200",
   info: "bg-surface-container-low border-border-hairline text-on-surface-variant",
   neutral: "bg-surface-container-low border-border-hairline text-on-surface-variant",
   clear: "bg-alert-green/10 border-alert-green/40 text-[#054024]",
