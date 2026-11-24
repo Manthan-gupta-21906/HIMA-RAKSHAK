@@ -7,6 +7,7 @@ import { FieldObservationPage } from "./pages/FieldObservationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
+import { WarningsPage } from "./pages/WarningsPage";
 
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth();
@@ -19,16 +20,7 @@ function ProtectedRoutes() {
         <Route path="/map" element={<MapPage />} />
         <Route path="/locations/:id" element={<LocationDetailPage />} />
         <Route path="/field-log" element={<FieldObservationPage />} />
-        <Route
-          path="/warnings"
-          element={
-            <ComingSoonPage
-              phase="Phase 6"
-              title="Official Warnings"
-              description="Authoritative IMD, CWC, and DGRE read-only bulletins."
-            />
-          }
-        />
+        <Route path="/warnings" element={<WarningsPage />} />
         <Route
           path="/sources"
           element={
