@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
+import { LocationDetailPage } from "./pages/LocationDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
@@ -15,16 +16,7 @@ function ProtectedRoutes() {
       <Route element={<AppShell />}>
         <Route path="/" element={<OverviewPage />} />
         <Route path="/map" element={<MapPage />} />
-        <Route
-          path="/locations/:id"
-          element={
-            <ComingSoonPage
-              phase="Phase 4"
-              title="Location Risk & Exposure Details"
-              description="Independent Flood and Avalanche assessments, confidence, and exposure."
-            />
-          }
-        />
+        <Route path="/locations/:id" element={<LocationDetailPage />} />
         <Route
           path="/field-log"
           element={
