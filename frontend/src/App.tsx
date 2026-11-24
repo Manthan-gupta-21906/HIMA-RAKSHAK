@@ -1,40 +1,44 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Button } from "./components/ui/Button";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { LoginPage } from "./pages/LoginPage";
 
-interface HealthResponse {
-  status: string;
-  service: string;
-  environment: string;
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-
-export function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/health`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<HealthResponse>;
-      })
-      .then(setHealth)
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Backend unreachable");
-      });
-  }, []);
+function ProtectedPlaceholder() {
+  const { user, logout } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <main style={{ fontFamily: "Inter, system-ui, sans-serif", maxWidth: 720, margin: "3rem auto", padding: "0 1rem" }}>
-      <h1>HIMA-RAKSHAK</h1>
-      <p>Multi-hazard flood and avalanche decision-support prototype for Jammu &amp; Kashmir.</p>
-      <p style={{ fontSize: "0.9rem", color: "#4a463f" }}>
-        Decision-support only: complements—and does not replace—official warnings or expert judgement.
-      </p>
-      <section style={{ padding: "1rem", border: "1px solid #d9d3c9", borderRadius: 6, background: "#faf9f8" }}>
-        <strong>Backend Status:</strong>{" "}
-        {health ? `${health.status.toUpperCase()} (${health.environment})` : error ? `Unavailable (${error})` : "Checking..."}
-      </section>
+    <main className="min-h-screen bg-surface-canvas flex items-center justify-center p-6">
+      <div className="max-w-md w-full bg-surface-card border border-border-hairline rounded p-6 flex flex-col gap-4">
+        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
+          Session Active • {user.role}
+        </span>
+        <h1 className="text-xl font-semibold text-text-primary">Welcome, {user.name}</h1>
+        <p className="text-xs text-on-surface-variant">
+          {user.station} ({user.district}) — {user.email}
+        </p>
+        <Button variant="secondary" onClick={logout}>
+          Sign Out
+        </Button>
+      </div>
     </main>
+  );
+}
+
+function PublicOnlyLogin() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />;
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<PublicOnlyLogin />} />
+          <Route path="/*" element={<ProtectedPlaceholder />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

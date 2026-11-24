@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* Surfaces & Canvas (Civil Defense Alpine Support) */
+  --color-surface: #faf9f8;
+  --color-surface-canvas: #f9f8f7;
+  --color-surface-card: #fcfcfc;
+  --color-surface-subtle: #ebe7df;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f3f2;
+  --color-surface-container: #eeeeed;
+  --color-surface-container-high: #e9e8e7;
+  --color-surface-container-highest: #e3e2e1;
+  --color-border-hairline: #d9d3c9;
+  --color-outline: #7b776e;
+  --color-outline-variant: #ccc6bc;
+
+  /* Text & Graphite Anchors */
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1d1b16;
+  --color-text-primary: #0e1414;
+  --color-text-muted: #7e765d;
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #4a463f;
+  --color-secondary: #605f52;
+  --color-secondary-container: #e3e0d0;
+
+  /* Hazard & Alert Accents */
+  --color-hazard-yellow: #ffd400;
+  --color-emergency-red: #f4472c;
+  --color-critical-blue: #3772ff;
+  --color-alert-green: #11d477;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* Institutional Agency Badges */
+  --color-agency-imd: #2752b8;
+  --color-agency-cwc: #037070;
+  --color-agency-dgre: #c48022;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: var(--color-surface-canvas);
+    color: var(--color-text-primary);
+  }
+}
