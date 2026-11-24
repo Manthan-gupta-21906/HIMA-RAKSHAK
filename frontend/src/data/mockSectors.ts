@@ -16,6 +16,7 @@ export interface MonitoringSector {
   confidence: "High" | "Moderate" | "Low";
   updatedAgo: string;
   isStale: boolean;
+  isPriority?: boolean;
 }
 
 export interface RegionalKpi {
@@ -48,6 +49,7 @@ export const MOCK_SECTORS: MonitoringSector[] = [
     confidence: "High",
     updatedAgo: "8m ago",
     isStale: false,
+    isPriority: true,
   },
   {
     id: "JK-BM-12",
@@ -64,6 +66,7 @@ export const MOCK_SECTORS: MonitoringSector[] = [
     confidence: "High",
     updatedAgo: "14m ago",
     isStale: false,
+    isPriority: true,
   },
   {
     id: "JK-KP-08",
@@ -80,5 +83,38 @@ export const MOCK_SECTORS: MonitoringSector[] = [
     confidence: "Low",
     updatedAgo: "3h ago • Stale",
     isStale: true,
+    isPriority: true,
+  },
+  {
+    id: "JK-AN-02",
+    name: "Anantnag - Sangam Gauge",
+    district: "Anantnag",
+    elevationM: 1590,
+    lat: 33.835,
+    lng: 75.072,
+    hazard: "flood",
+    threatLabel: "Riverine Flood Watch",
+    riskTier: "Moderate",
+    summaryMetric: "6h Rain: 32 mm | Jhelum Gauge: 16.4 ft (Steady)",
+    exposureSummary: "Pop. ~22,000 • NH-44 Corridor • 3 Clinics",
+    confidence: "High",
+    updatedAgo: "5m ago",
+    isStale: false,
+  },
+  {
+    id: "JK-BD-09",
+    name: "Bandipora - Gurez Valley",
+    district: "Bandipora",
+    elevationM: 2420,
+    lat: 34.634,
+    lng: 74.832,
+    hazard: "avalanche",
+    threatLabel: "Snowpack Stability Advisory",
+    riskTier: "Low",
+    summaryMetric: "24h Snow: 14 cm | Razdan Pass: Restricted",
+    exposureSummary: "Pop. ~4,100 • Razdan Pass Rd • 1 CHC",
+    confidence: "Moderate",
+    updatedAgo: "22m ago",
+    isStale: false,
   },
 ];

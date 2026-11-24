@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
 
 function ProtectedRoutes() {
@@ -13,16 +14,7 @@ function ProtectedRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<OverviewPage />} />
-        <Route
-          path="/map"
-          element={
-            <ComingSoonPage
-              phase="Phase 3"
-              title="Interactive Multi-Hazard Map"
-              description="Leaflet map with J&K sector markers and hazard filters."
-            />
-          }
-        />
+        <Route path="/map" element={<MapPage />} />
         <Route
           path="/locations/:id"
           element={
