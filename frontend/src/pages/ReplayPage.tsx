@@ -125,7 +125,7 @@ export function ReplayPage() {
           aria-label="Zero threat empty state"
           className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center flex flex-col items-center gap-3 max-w-xl mx-auto"
         >
-          <span className="w-12 h-12 rounded-full bg-emerald-50 text-alert-green flex items-center justify-center">
+          <span className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-alert-green flex items-center justify-center">
             <span className="material-symbols-outlined text-[26px]">verified</span>
           </span>
           <h2 className="text-lg font-bold text-text-primary">

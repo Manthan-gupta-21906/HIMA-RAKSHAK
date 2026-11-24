@@ -92,7 +92,7 @@ export function LocationDetailPage() {
           <span
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${
               offlineSensors > 0
-                ? "bg-amber-50 border-hazard-yellow/70 text-amber-900"
+                ? "bg-amber-50 dark:bg-amber-950/40 border-hazard-yellow/70 text-amber-900 dark:text-amber-200"
                 : "bg-surface-container-low border-border-hairline text-on-surface-variant"
             }`}
           >

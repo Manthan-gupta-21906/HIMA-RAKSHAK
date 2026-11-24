@@ -10,23 +10,13 @@ import {
   type RefreshIntervalMin,
   type UnitSystem,
 } from "../types/preferences";
-
-const PREFS_STORAGE_KEY = "hima_rakshak_preferences";
-
-function loadPreferences(): OperatorPreferences {
-  try {
-    const raw = localStorage.getItem(PREFS_STORAGE_KEY);
-    return raw ? { ...DEFAULT_PREFERENCES, ...(JSON.parse(raw) as Partial<OperatorPreferences>) } : DEFAULT_PREFERENCES;
-  } catch {
-    return DEFAULT_PREFERENCES;
-  }
-}
+import { loadStoredPreferences, PREFS_STORAGE_KEY } from "../utils/preferences";
 
 /** Operator profile and control-room preferences page. */
 export function ProfilePage() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [prefs, setPrefs] = useState<OperatorPreferences>(loadPreferences);
+  const [prefs, setPrefs] = useState<OperatorPreferences>(loadStoredPreferences);
   const [savedNotice, setSavedNotice] = useState(false);
 
   const handleSave = (event: FormEvent) => {
@@ -110,7 +100,7 @@ export function ProfilePage() {
             {savedNotice ? (
               <div
                 role="status"
-                className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-[#054024] flex items-center gap-2"
+                className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-[#054024] dark:text-emerald-200 flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
                 <span>Preferences saved for this workstation.</span>

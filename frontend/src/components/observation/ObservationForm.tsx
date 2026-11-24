@@ -331,7 +331,7 @@ export function ObservationForm({
             value={observationValue}
             onChange={handleValueChange}
             disabled={isDisabled}
-            className={`w-full h-10 pl-3.5 pr-24 rounded-lg bg-white border text-base font-semibold focus:outline-none focus:ring-1 transition-all ${
+            className={`w-full h-10 pl-3.5 pr-24 rounded-lg bg-surface-container-lowest border text-base font-semibold focus:outline-none focus:ring-1 transition-all ${
               showError
                 ? "border-emergency-red bg-[#fff5f5] text-[#991b1b] focus:ring-emergency-red shadow-sm"
                 : "border-border-hairline text-text-primary focus:border-primary focus:ring-primary/20"

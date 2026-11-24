@@ -186,7 +186,7 @@ export function SourcesPage() {
                 </div>
                 <p className="text-[11px] text-text-muted pt-1">{src.provenanceNote}</p>
                 {src.knownLimitation ? (
-                  <p className="text-[11px] text-agency-dgre font-medium bg-amber-50/70 border border-border-hairline rounded-lg px-2.5 py-1.5 mt-1">
+                  <p className="text-[11px] text-agency-dgre font-medium bg-amber-50/70 dark:bg-amber-950/40 border border-border-hairline rounded-lg px-2.5 py-1.5 mt-1">
                     Limitation: {src.knownLimitation}
                   </p>
                 ) : null}

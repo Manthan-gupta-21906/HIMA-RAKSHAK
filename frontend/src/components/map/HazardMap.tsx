@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MonitoringSector } from "../../data/mockSectors";
+import { loadStoredPreferences } from "../../utils/preferences";
 
 const JK_CENTER: [number, number] = [34.12, 74.65];
 const JK_DEFAULT_ZOOM = 8;
@@ -111,7 +112,9 @@ export function HazardMap({ sectors, selectedSectorId, onSelectSector }: HazardM
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersByIdRef = useRef<Map<string, L.Marker>>(new Map());
   const onSelectSectorRef = useRef(onSelectSector);
-  const [baseLayer, setBaseLayer] = useState<BaseLayerId>("standard");
+  const [baseLayer, setBaseLayer] = useState<BaseLayerId>(
+    () => loadStoredPreferences().defaultMapLayer
+  );
 
   useEffect(() => {
     onSelectSectorRef.current = onSelectSector;
