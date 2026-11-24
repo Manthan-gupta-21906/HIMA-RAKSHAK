@@ -50,7 +50,8 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /sdrf field officer/i }));
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(await screen.findByText(/welcome, sub-inspector r\. ahmed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/regional hazard monitor/i)).toBeInTheDocument();
+    expect(screen.getByText(/sdrf ground unit 04/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /sign out/i }));
     expect(await screen.findByRole("heading", { name: /^sign in$/i })).toBeInTheDocument();
