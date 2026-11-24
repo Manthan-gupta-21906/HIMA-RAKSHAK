@@ -1,12 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ComingSoonPage } from "./pages/ComingSoonPage";
-import { LocationDetailPage } from "./pages/LocationDetailPage";
 import { FieldObservationPage } from "./pages/FieldObservationPage";
+import { LocationDetailPage } from "./pages/LocationDetailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { ReplayPage } from "./pages/ReplayPage";
 import { SourcesPage } from "./pages/SourcesPage";
 import { WarningsPage } from "./pages/WarningsPage";
@@ -25,16 +25,7 @@ function ProtectedRoutes() {
         <Route path="/warnings" element={<WarningsPage />} />
         <Route path="/sources" element={<SourcesPage />} />
         <Route path="/replay" element={<ReplayPage />} />
-        <Route
-          path="/profile"
-          element={
-            <ComingSoonPage
-              phase="Phase 9"
-              title="Profile & Settings"
-              description="Operator profile and control-room alert preferences."
-            />
-          }
-        />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   );
