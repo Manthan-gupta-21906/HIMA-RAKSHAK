@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.locations import router as locations_router
+from app.api.routes.sources import router as sources_router
 from app.config import Settings, get_settings
 
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(locations_router)
+    app.include_router(sources_router)
     return app
 
 
