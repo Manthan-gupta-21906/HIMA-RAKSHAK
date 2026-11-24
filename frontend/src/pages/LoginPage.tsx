@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import type { UserRole } from "../types/auth";
 
 interface FormErrors {
@@ -35,6 +36,7 @@ function validateLogin(email: string, password: string): FormErrors {
 /** Operator authentication screen styled with Civil Defense Alpine Support tokens. */
 export function LoginPage() {
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -69,9 +71,11 @@ export function LoginPage() {
     <div className="min-h-screen bg-surface-canvas flex flex-col justify-between px-4 py-8">
       <header className="max-w-md w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">ac_unit</span>
-          </div>
+          <img
+            src="/hima-rakshak-logo.png"
+            alt="HIMA-RAKSHAK Logo"
+            className="w-10 h-10 rounded-lg object-contain shrink-0"
+          />
           <div>
             <p className="text-sm font-bold text-text-primary tracking-tight">HIMA-RAKSHAK</p>
             <p className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-semibold">
@@ -79,6 +83,16 @@ export function LoginPage() {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="w-9 h-9 rounded-full border border-border-hairline bg-surface-card hover:bg-surface-container flex items-center justify-center text-text-primary transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {theme === "dark" ? "light_mode" : "dark_mode"}
+          </span>
+        </button>
       </header>
 
       <main className="max-w-md w-full mx-auto my-8">
