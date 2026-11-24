@@ -35,16 +35,22 @@ export function FieldObservationPage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border-hairline">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            <span className="material-symbols-outlined text-[16px]">dashboard</span>
-            Dashboard
-          </div>
-          <span className="text-text-muted">/</span>
-          <span className="text-text-muted uppercase font-medium">Telemetry Override</span>
-          <span className="text-text-muted">/</span>
-          <span className="font-semibold text-text-primary uppercase">Log Observation</span>
-        </div>
+        <nav
+          aria-label="Breadcrumb"
+          className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.06em]"
+        >
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 font-bold text-text-muted hover:text-text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px]">dashboard</span>
+            <span>Dashboard</span>
+          </Link>
+          <span className="text-border-hairline">/</span>
+          <span className="font-medium text-text-muted">Telemetry Override</span>
+          <span className="text-border-hairline">/</span>
+          <span className="font-bold text-text-primary">Log Observation</span>
+        </nav>
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-card border border-border-hairline shadow-xs">
           <span
