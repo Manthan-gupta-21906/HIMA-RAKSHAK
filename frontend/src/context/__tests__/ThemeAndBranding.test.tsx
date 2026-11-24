@@ -19,22 +19,16 @@ describe("Theme & Branding (Phase 10)", () => {
     document.documentElement.classList.remove("dark");
   });
 
-  it("renders custom HIMA-RAKSHAK logo and toggles dark mode on LoginPage", async () => {
-    const user = userEvent.setup();
+  it("renders custom HIMA-RAKSHAK logo on LoginPage without top-bar theme toggle", () => {
     window.history.pushState({}, "", "/login");
     render(<App />);
 
     const logo = screen.getByAltText("HIMA-RAKSHAK Logo") as HTMLImageElement;
     expect(logo.getAttribute("src")).toBe("/hima-rakshak-logo.png");
-
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-    await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
-
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(localStorage.getItem("hima_rakshak_theme")).toBe("dark");
+    expect(screen.queryByRole("button", { name: /switch to dark mode/i })).not.toBeInTheDocument();
   });
 
-  it("renders custom logo in TopHeader and allows theme switching in ProfilePage", async () => {
+  it("renders custom logo in TopHeader and switches theme in Profile & Settings", async () => {
     const user = userEvent.setup();
     localStorage.setItem("hima_rakshak_auth_user", JSON.stringify(SEEDED_USER));
     window.history.pushState({}, "", "/profile");
@@ -42,11 +36,13 @@ describe("Theme & Branding (Phase 10)", () => {
 
     const logo = screen.getByAltText("HIMA-RAKSHAK Logo") as HTMLImageElement;
     expect(logo.getAttribute("src")).toBe("/hima-rakshak-logo.png");
+    expect(screen.queryByRole("button", { name: /switch to dark mode/i })).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Display Theme"), "dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(localStorage.getItem("hima_rakshak_theme")).toBe("dark");
 
-    await user.click(screen.getByRole("button", { name: /switch to light mode/i }));
+    await user.selectOptions(screen.getByLabelText("Display Theme"), "light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 });

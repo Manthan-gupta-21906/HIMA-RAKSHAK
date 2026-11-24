@@ -2,7 +2,6 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
 import type { UserRole } from "../types/auth";
 
 interface FormErrors {
@@ -36,7 +35,6 @@ function validateLogin(email: string, password: string): FormErrors {
 /** Operator authentication screen styled with Civil Defense Alpine Support tokens. */
 export function LoginPage() {
   const { login } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -74,7 +72,7 @@ export function LoginPage() {
           <img
             src="/hima-rakshak-logo.png"
             alt="HIMA-RAKSHAK Logo"
-            className="h-14 w-auto rounded-lg object-contain shrink-0"
+            className="h-20 w-auto rounded-lg object-contain shrink-0"
           />
           <div>
             <p className="text-sm font-bold text-text-primary tracking-tight">HIMA-RAKSHAK</p>
@@ -83,16 +81,6 @@ export function LoginPage() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          className="w-9 h-9 rounded-full border border-border-hairline bg-surface-card hover:bg-surface-container flex items-center justify-center text-text-primary transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {theme === "dark" ? "light_mode" : "dark_mode"}
-          </span>
-        </button>
       </header>
 
       <main className="max-w-md w-full mx-auto my-8">
