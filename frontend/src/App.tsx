@@ -7,6 +7,7 @@ import { FieldObservationPage } from "./pages/FieldObservationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MapPage } from "./pages/MapPage";
 import { OverviewPage } from "./pages/OverviewPage";
+import { ReplayPage } from "./pages/ReplayPage";
 import { SourcesPage } from "./pages/SourcesPage";
 import { WarningsPage } from "./pages/WarningsPage";
 
@@ -23,16 +24,7 @@ function ProtectedRoutes() {
         <Route path="/field-log" element={<FieldObservationPage />} />
         <Route path="/warnings" element={<WarningsPage />} />
         <Route path="/sources" element={<SourcesPage />} />
-        <Route
-          path="/replay"
-          element={
-            <ComingSoonPage
-              phase="Phase 8"
-              title="Historical Event Replay"
-              description="Timeline playback and system loading/empty edge states."
-            />
-          }
-        />
+        <Route path="/replay" element={<ReplayPage />} />
         <Route
           path="/profile"
           element={
