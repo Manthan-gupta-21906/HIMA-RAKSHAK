@@ -1,0 +1,12 @@
+# Default owners — replace Teammate1/Teammate2 with actual GitHub handles
+* @Teammate1 @Teammate2
+
+# Platform, data foundation and release (Teammate 1)
+/backend/app/core/     @Teammate1
+/backend/app/api/      @Teammate1
+/backend/tests/        @Teammate1
+/docker-compose.yml    @Teammate1
+/.github/              @Teammate1
+
+# Frontend and hazard intelligence (Teammate 2)
+/frontend/             @Teammate2
