@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
+import { useTheme, type ThemeMode } from "../context/ThemeContext";
 import {
   DEFAULT_PREFERENCES,
   type DefaultMapLayer,
@@ -24,6 +25,7 @@ function loadPreferences(): OperatorPreferences {
 /** Operator profile and control-room preferences page. */
 export function ProfilePage() {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [prefs, setPrefs] = useState<OperatorPreferences>(loadPreferences);
   const [savedNotice, setSavedNotice] = useState(false);
 
@@ -156,26 +158,43 @@ export function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pref-refresh" className="text-xs font-semibold text-text-primary">
-                Telemetry Auto-Refresh Interval
-              </label>
-              <select
-                id="pref-refresh"
-                value={prefs.autoRefreshIntervalMin}
-                onChange={(e) => {
-                  setSavedNotice(false);
-                  setPrefs((p) => ({
-                    ...p,
-                    autoRefreshIntervalMin: Number(e.target.value) as RefreshIntervalMin,
-                  }));
-                }}
-                className="h-10 px-3 rounded-lg bg-surface-container-lowest border border-border-hairline text-xs font-medium text-text-primary sm:w-64"
-              >
-                <option value={5}>Every 5 minutes</option>
-                <option value={15}>Every 15 minutes</option>
-                <option value={30}>Every 30 minutes</option>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="pref-theme" className="text-xs font-semibold text-text-primary">
+                  Display Theme
+                </label>
+                <select
+                  id="pref-theme"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as ThemeMode)}
+                  className="h-10 px-3 rounded-lg bg-surface-container-lowest border border-border-hairline text-xs font-medium text-text-primary"
+                >
+                  <option value="light">Light (Alpine Canvas)</option>
+                  <option value="dark">Dark (Control Room)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="pref-refresh" className="text-xs font-semibold text-text-primary">
+                  Telemetry Auto-Refresh Interval
+                </label>
+                <select
+                  id="pref-refresh"
+                  value={prefs.autoRefreshIntervalMin}
+                  onChange={(e) => {
+                    setSavedNotice(false);
+                    setPrefs((p) => ({
+                      ...p,
+                      autoRefreshIntervalMin: Number(e.target.value) as RefreshIntervalMin,
+                    }));
+                  }}
+                  className="h-10 px-3 rounded-lg bg-surface-container-lowest border border-border-hairline text-xs font-medium text-text-primary"
+                >
+                  <option value={5}>Every 5 minutes</option>
+                  <option value={15}>Every 15 minutes</option>
+                  <option value={30}>Every 30 minutes</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3 pt-2 border-t border-border-hairline">

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 interface TopHeaderProps {
@@ -5,9 +6,9 @@ interface TopHeaderProps {
   isMobileNavOpen: boolean;
 }
 
-/** Fixed operational top bar displaying brand, active control station, and user session actions. */
+/** Fixed operational top bar displaying brand, active control station, and user session link. */
 export function TopHeader({ onToggleMobileNav, isMobileNavOpen }: TopHeaderProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-surface-card/95 backdrop-blur-md border-b border-border-hairline px-4 md:px-6 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
@@ -24,9 +25,11 @@ export function TopHeader({ onToggleMobileNav, isMobileNavOpen }: TopHeaderProps
           </span>
         </button>
 
-        <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-xs">
-          <span className="material-symbols-outlined text-[18px]">ac_unit</span>
-        </div>
+        <img
+          src="/hima-rakshak-logo.png"
+          alt="HIMA-RAKSHAK Logo"
+          className="h-14 w-auto rounded-lg object-contain shrink-0"
+        />
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-text-primary tracking-tight">HIMA-RAKSHAK</span>
@@ -50,22 +53,14 @@ export function TopHeader({ onToggleMobileNav, isMobileNavOpen }: TopHeaderProps
               </span>
               <span className="text-[11px] text-text-muted leading-tight">{user.district}</span>
             </div>
-            <div
-              className="w-9 h-9 rounded-full bg-surface-container border border-border-hairline flex items-center justify-center font-bold text-xs text-text-primary"
-              title={`${user.name} (${user.role})`}
+            <Link
+              to="/profile"
+              aria-label="Open profile and settings"
+              className="w-9 h-9 rounded-full bg-surface-container border border-border-hairline hover:border-primary-container flex items-center justify-center font-bold text-xs text-text-primary transition-colors"
+              title={`${user.name} (${user.role}) — Profile & Settings`}
             >
               {user.initials}
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              aria-label="Sign out"
-              title="Sign out"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-border-hairline bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-text-primary transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px]">logout</span>
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
+            </Link>
           </>
         ) : null}
       </div>

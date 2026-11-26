@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
@@ -41,6 +43,32 @@
   --color-agency-imd: #2752b8;
   --color-agency-cwc: #037070;
   --color-agency-dgre: #c48022;
+}
+
+.dark {
+  --color-surface: #111315;
+  --color-surface-canvas: #0c0e10;
+  --color-surface-card: #171a1d;
+  --color-surface-subtle: #22262b;
+  --color-surface-container-lowest: #121518;
+  --color-surface-container-low: #1d2125;
+  --color-surface-container: #24292e;
+  --color-surface-container-high: #2d3339;
+  --color-surface-container-highest: #363d44;
+  --color-border-hairline: #2e343b;
+  --color-outline: #8d96a0;
+  --color-outline-variant: #3b424a;
+
+  --color-primary: #f3f4f6;
+  --color-on-primary: #111315;
+  --color-primary-container: #f1efe9;
+  --color-text-primary: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --color-on-surface: #f3f4f6;
+  --color-on-surface-variant: #cbd5e1;
+  --color-secondary: #cbd5e1;
+  --color-secondary-container: #2b3036;
+  color-scheme: dark;
 }
 
 @layer base {

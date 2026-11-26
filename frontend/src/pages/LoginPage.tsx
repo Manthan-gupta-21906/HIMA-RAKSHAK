@@ -69,9 +69,11 @@ export function LoginPage() {
     <div className="min-h-screen bg-surface-canvas flex flex-col justify-between px-4 py-8">
       <header className="max-w-md w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">ac_unit</span>
-          </div>
+          <img
+            src="/hima-rakshak-logo.png"
+            alt="HIMA-RAKSHAK Logo"
+            className="h-20 w-auto rounded-lg object-contain shrink-0"
+          />
           <div>
             <p className="text-sm font-bold text-text-primary tracking-tight">HIMA-RAKSHAK</p>
             <p className="text-[11px] text-text-muted uppercase tracking-[0.06em] font-semibold">
