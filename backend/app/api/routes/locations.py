@@ -2,13 +2,10 @@
 
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.security import decode_access_token
+from app.auth import require_admin, require_any_authenticated
 from app.models.location import CoverageStatus, HazardType
-from app.models.user import UserRole
 from app.repositories.location_repository import (
     LocationRepository,
     get_location_repository,
@@ -24,48 +21,11 @@ from app.services.location_service import LocationNotFoundError, LocationService
 
 router = APIRouter(prefix="/locations", tags=["locations"])
 
-oauth2_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
-
 
 def get_location_service(
     repo: LocationRepository = Depends(get_location_repository),
 ) -> LocationService:
     return LocationService(repo)
-
-
-def require_admin_or_header(
-    x_user_role: str | None = Header(default=None, alias="X-User-Role"),
-    token: str | None = Depends(oauth2_optional),
-) -> str:
-    """Enforce admin role via X-User-Role header or Bearer JWT token."""
-    if token:
-        try:
-            payload = decode_access_token(token)
-            role = payload.get("role")
-            if role in (UserRole.ADMIN.value, UserRole.ADMIN):
-                return "admin"
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin role required to modify pilot locations.",
-            )
-        except JWTError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials.",
-            ) from exc
-
-    if x_user_role is not None:
-        if x_user_role.lower() == "admin":
-            return "admin"
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin role required to modify pilot locations.",
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication credentials or X-User-Role header required.",
-    )
 
 
 @router.get("", response_model=LocationListResponse)
@@ -77,6 +37,7 @@ def list_locations(
     ),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    _user: object = Depends(require_any_authenticated),
     service: LocationService = Depends(get_location_service),
 ) -> LocationListResponse:
     """List or search curated pilot locations with pagination."""
@@ -106,6 +67,7 @@ def list_locations(
 @router.get("/{location_id}", response_model=LocationOut)
 def get_location_detail(
     location_id: str,
+    _user: object = Depends(require_any_authenticated),
     service: LocationService = Depends(get_location_service),
 ) -> LocationOut:
     """Get details for a single pilot location."""
@@ -119,7 +81,7 @@ def get_location_detail(
 @router.post("", response_model=LocationOut, status_code=status.HTTP_201_CREATED)
 def create_location(
     payload: LocationCreate,
-    _role: str = Depends(require_admin_or_header),
+    _admin: object = Depends(require_admin),
     service: LocationService = Depends(get_location_service),
 ) -> LocationOut:
     """Register a new pilot location (admin only)."""
@@ -131,7 +93,7 @@ def create_location(
 def update_location_coverage(
     location_id: str,
     payload: LocationCoverageUpdate,
-    _role: str = Depends(require_admin_or_header),
+    _admin: object = Depends(require_admin),
     service: LocationService = Depends(get_location_service),
 ) -> LocationOut:
     """Update coverage status for a pilot location (admin only)."""

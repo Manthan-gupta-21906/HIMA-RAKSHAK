@@ -24,8 +24,11 @@ class SpatialPoint(TypeDecorator[dict[str, Any]]):
 
     impl = Text
     cache_ok = True
+    spatial_index = False
 
-    def load_dialect_impl(self, dialect: Dialect) -> Any:
+    def load_dialect_impl(self, dialect: Dialect | None) -> Any:
+        if dialect is None:
+            return Text()
         if dialect.name == "postgresql":
             return dialect.type_descriptor(Geometry("POINT", srid=4326))
         return dialect.type_descriptor(Text())

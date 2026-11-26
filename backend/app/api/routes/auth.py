@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
@@ -24,11 +25,13 @@ def _get_db() -> Session:
     return _session_factory()
 
 
-def _ensure_demo_users(db: Session) -> None:
-    """Idempotently seed demo users (admin, operator, viewer) if none exist."""
+def seed_demo_users(db: Session) -> int:
+    """Explicitly seed demo users only in development/test environments."""
+    if get_settings().app_env.lower() not in {"development", "test"}:
+        return 0
     existing = db.query(UserModel).count()
     if existing > 0:
-        return
+        return 0
     demo_users = [
         ("admin", "admin1234", "Demo Admin", UserRole.ADMIN),
         ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
@@ -46,6 +49,18 @@ def _ensure_demo_users(db: Session) -> None:
             )
         )
     db.commit()
+    return len(demo_users)
+
+
+def _seed_dev_demo_users_on_startup() -> None:
+    db = _get_db()
+    try:
+        seed_demo_users(db)
+    finally:
+        db.close()
+
+
+_seed_dev_demo_users_on_startup()
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -53,7 +68,6 @@ def login(payload: LoginRequest) -> TokenResponse:
     """Authenticate with username and password, returning a JWT."""
     db = _get_db()
     try:
-        _ensure_demo_users(db)
         user = db.query(UserModel).filter(UserModel.username == payload.username).first()
         if user is None or not verify_password(payload.password, user.hashed_password):
             raise HTTPException(

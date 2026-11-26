@@ -5,7 +5,7 @@ from collections.abc import Generator
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import require_admin
+from app.auth import require_admin, require_any_authenticated
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
 from app.models.source import SourceModel  # noqa: F401
@@ -46,6 +46,7 @@ def _get_service(db: Session = Depends(_get_db)) -> SourceService:
 def list_sources(
     source_type: SourceType | None = Query(None),
     access_mode: AccessMode | None = Query(None),
+    _user: object = Depends(require_any_authenticated),
     service: SourceService = Depends(_get_service),
 ) -> SourceListResponse:
     """List registered data sources with optional filters."""
@@ -59,6 +60,7 @@ def list_sources(
 @router.get("/{source_id}", response_model=SourceResponse)
 def get_source(
     source_id: str,
+    _user: object = Depends(require_any_authenticated),
     service: SourceService = Depends(_get_service),
 ) -> SourceResponse:
     """Get details for a single data source."""

@@ -105,6 +105,20 @@ def test_insufficient_role_gets_403() -> None:
         json={"username": "viewer", "password": "viewer1234"},
     )
     token = login_resp.json()["access_token"]
+    # Forged X-User-Role header without JWT must be rejected
+    forged_resp = client.post(
+        "/locations",
+        json={
+            "location_id": "JK-ROLE-01",
+            "name": "Role Test",
+            "admin_unit": "Test District",
+            "latitude": 34.0,
+            "longitude": 75.0,
+        },
+        headers={"X-User-Role": "admin"},
+    )
+    assert forged_resp.status_code == 401
+
     # Viewers should be forbidden from creating locations (admin-only)
     response = client.post(
         "/locations",
@@ -115,7 +129,42 @@ def test_insufficient_role_gets_403() -> None:
             "latitude": 34.0,
             "longitude": 75.0,
         },
-        headers={"Authorization": f"Bearer {token}", "X-User-Role": "viewer"},
+        headers={"Authorization": f"Bearer {token}"},
     )
-    # Location create requires admin role via X-User-Role header
     assert response.status_code == 403
+
+
+def test_production_never_seeds_demo_users_on_login(tmp_path: Path, monkeypatch: object) -> None:
+    from app.api.routes import auth as auth_routes
+    from app.config import Settings
+    from app.db.base import Base
+
+    prod_settings = Settings(
+        app_env="production",
+        jwt_secret_key="p" * 32,
+        _env_file=None,
+    )
+    monkeypatch.setattr(auth_routes, "get_settings", lambda: prod_settings)  # type: ignore[attr-defined]
+
+    db_url = f"sqlite:///{tmp_path / 'prod_auth.db'}"
+    prod_engine = create_db_engine(db_url)
+    Base.metadata.create_all(bind=prod_engine)
+    prod_factory = get_session_factory(prod_engine)
+    monkeypatch.setattr(auth_routes, "_get_db", lambda: prod_factory())  # type: ignore[attr-defined]
+
+    db = prod_factory()
+    try:
+        assert auth_routes.seed_demo_users(db) == 0
+        assert db.query(UserModel).count() == 0
+    finally:
+        db.close()
+
+    resp = client.post("/auth/login", json={"username": "admin", "password": "admin1234"})
+    assert resp.status_code == 401
+
+    db_check = prod_factory()
+    try:
+        assert db_check.query(UserModel).count() == 0
+    finally:
+        db_check.close()
+        prod_engine.dispose()

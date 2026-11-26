@@ -10,8 +10,18 @@ from app.seed.locations import PILOT_LOCATIONS, seed_locations
 client = TestClient(app)
 
 
+def _viewer_headers() -> dict[str, str]:
+    token = create_access_token("viewer_user", "viewer")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_list_locations_requires_authentication() -> None:
+    assert client.get("/locations").status_code == 401
+    assert client.get("/locations/JK-GUL-01").status_code == 401
+
+
 def test_list_locations_returns_seeded_demo_fixtures() -> None:
-    res = client.get("/locations")
+    res = client.get("/locations", headers=_viewer_headers())
     assert res.status_code == 200
     data = res.json()
     assert data["total"] >= len(PILOT_LOCATIONS)
@@ -21,7 +31,7 @@ def test_list_locations_returns_seeded_demo_fixtures() -> None:
 
 
 def test_list_locations_pagination() -> None:
-    res = client.get("/locations", params={"page": 1, "page_size": 2})
+    res = client.get("/locations", params={"page": 1, "page_size": 2}, headers=_viewer_headers())
     assert res.status_code == 200
     data = res.json()
     assert len(data["items"]) == 2
@@ -31,7 +41,11 @@ def test_list_locations_pagination() -> None:
 
 
 def test_search_locations_by_query_and_hazard() -> None:
-    res = client.get("/locations", params={"q": "Srinagar", "hazard_type": "flood"})
+    res = client.get(
+        "/locations",
+        params={"q": "Srinagar", "hazard_type": "flood"},
+        headers=_viewer_headers(),
+    )
     assert res.status_code == 200
     items = res.json()["items"]
     assert len(items) == 1
@@ -39,7 +53,11 @@ def test_search_locations_by_query_and_hazard() -> None:
 
 
 def test_unsupported_coverage_is_explicit() -> None:
-    res = client.get("/locations", params={"coverage_status": "unsupported"})
+    res = client.get(
+        "/locations",
+        params={"coverage_status": "unsupported"},
+        headers=_viewer_headers(),
+    )
     assert res.status_code == 200
     items = res.json()["items"]
     assert any(item["location_id"] == "JK-DRS-01" for item in items)
@@ -49,11 +67,11 @@ def test_unsupported_coverage_is_explicit() -> None:
 
 
 def test_get_location_detail_and_unknown_404() -> None:
-    ok = client.get("/locations/JK-GUL-01")
+    ok = client.get("/locations/JK-GUL-01", headers=_viewer_headers())
     assert ok.status_code == 200
     assert ok.json()["name"].startswith("Gulmarg")
 
-    missing = client.get("/locations/JK-UNKNOWN-99")
+    missing = client.get("/locations/JK-UNKNOWN-99", headers=_viewer_headers())
     assert missing.status_code == 404
     assert missing.json()["error_code"] == "HTTP_404"
 
@@ -81,18 +99,41 @@ def test_protected_writes_enforce_role_policy() -> None:
     unauth = client.post("/locations", json=payload)
     assert unauth.status_code == 401
 
-    forbidden = client.post(
-        "/locations", json=payload, headers={"X-User-Role": "district_team"}
-    )
-    assert forbidden.status_code == 403
+    # Forged X-User-Role header without JWT must be rejected
+    forged = client.post("/locations", json=payload, headers={"X-User-Role": "admin"})
+    assert forged.status_code == 401
 
-    # Test with X-User-Role: admin
-    created = client.post("/locations", json=payload, headers={"X-User-Role": "admin"})
+    # Invalid Bearer token must be rejected
+    invalid = client.post(
+        "/locations", json=payload, headers={"Authorization": "Bearer invalid.jwt.token"}
+    )
+    assert invalid.status_code == 401
+
+    # Viewer and operator tokens get 403 on admin-only write
+    viewer_token = create_access_token("viewer_user", "viewer")
+    assert (
+        client.post(
+            "/locations", json=payload, headers={"Authorization": f"Bearer {viewer_token}"}
+        ).status_code
+        == 403
+    )
+    operator_token = create_access_token("operator_user", "district_operator")
+    assert (
+        client.post(
+            "/locations", json=payload, headers={"Authorization": f"Bearer {operator_token}"}
+        ).status_code
+        == 403
+    )
+
+    # Admin JWT succeeds
+    admin_token = create_access_token("admin_user", "admin")
+    created = client.post(
+        "/locations", json=payload, headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert created.status_code == 201
     assert created.json()["location_id"] == "JK-PAH-01"
 
     # Test patch coverage with Bearer JWT token
-    admin_token = create_access_token("admin_user", "admin")
     patch_payload = {
         "coverage_status": "supported",
         "coverage_note": "Upgraded with field telemetry station.",
@@ -106,7 +147,6 @@ def test_protected_writes_enforce_role_policy() -> None:
     assert patched.json()["coverage_status"] == "supported"
 
     # Viewer token gets 403 on protected write
-    viewer_token = create_access_token("viewer_user", "viewer")
     denied = client.patch(
         "/locations/JK-PAH-01/coverage",
         json=patch_payload,
