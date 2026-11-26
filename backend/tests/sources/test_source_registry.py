@@ -123,7 +123,7 @@ def _admin_headers() -> dict[str, str]:
     """Log in as admin and return Authorization header."""
     resp = client.post(
         "/auth/login",
-        json={"username": "admin", "password": "admin1234"},
+        json={"username": "Admin", "password": "Admin123"},
     )
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
