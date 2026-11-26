@@ -1,7 +1,7 @@
 """Priority calculation and emergency response ranking combining hazard and impact."""
 
 from app.risk.impact import compute_impact_score
-from app.schemas.common import FreshnessStatus, PredictionStatus, RiskClass
+from app.schemas.common import RiskClass
 from app.schemas.exposure import LocationExposureProfile, PriorityAssessment
 from app.schemas.risk import RiskAssessmentContract
 

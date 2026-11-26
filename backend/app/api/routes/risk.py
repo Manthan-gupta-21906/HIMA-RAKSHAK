@@ -170,7 +170,7 @@ def get_location_priority(
     _user: object = Depends(require_any_authenticated),
     workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
 ) -> PriorityAssessment:
-    """Generate explainable priority record combining hazard, exposure, confidence, and readiness."""
+    """Generate explainable priority record from hazard, exposure, confidence, and readiness."""
     try:
         return workflow.get_priority(location_id)
     except LocationNotFoundError as exc:

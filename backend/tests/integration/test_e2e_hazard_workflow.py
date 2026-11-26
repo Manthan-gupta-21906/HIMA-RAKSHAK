@@ -6,7 +6,7 @@ Flow verified:
    -> verify persisted assessment (GET /risk/state/{location_id}, GET /risk/current/{location_id})
 3. Verify spatial exposure analysis (GET /risk/exposure/{location_id})
 4. Verify explainable risk prioritization (GET /risk/priority/{location_id})
-5. Verify persisted alert & action history (GET /alerts, POST /alerts/{id}/acknowledge, PATCH /alerts/{id}/action)
+5. Verify persisted alert & action history (/alerts, /acknowledge, /action)
 6. Verify authoritative official warnings (GET /warnings) remain distinct and read-only.
 """
 
@@ -22,11 +22,9 @@ from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
 from app.main import app
 from app.models.alert import AlertActionModel  # noqa: F401
-from app.models.location import LocationModel
 from app.models.observation import ObservationModel  # noqa: F401
 from app.models.official_warning import OfficialWarningModel  # noqa: F401
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
-from app.models.source import SourceModel
 from app.seed.init_demo_data import seed_pilot_locations, seed_sources
 
 client = TestClient(app)
@@ -115,7 +113,7 @@ def test_end_to_end_observation_to_alert_action_workflow() -> None:
     assert obs_data["total"] >= 2
     assert any(item["observation_id"] == rain_obs["observation_id"] for item in obs_data["items"])
 
-    # 2. Controlled assessment workflow -> extracts features, checks freshness/readiness, executes & saves
+    # 2. Controlled assessment workflow -> extracts features, checks readiness, executes & saves
     eval_resp = client.post(f"/risk/evaluate/{location_id}", headers=headers)
     assert eval_resp.status_code == 200, eval_resp.text
     eval_data = eval_resp.json()
@@ -123,7 +121,7 @@ def test_end_to_end_observation_to_alert_action_workflow() -> None:
     assert eval_data["risk_state"]["flood"] is not None
     assert eval_data["risk_state"]["flood"]["prediction_status"] in {"ready", "stale"}
 
-    # Verify persisted assessment via GET /risk/state/{location_id} & GET /risk/current/{location_id}
+    # Verify persisted assessment via GET /risk/state & GET /risk/current
     state_resp = client.get(f"/risk/state/{location_id}", headers=headers)
     assert state_resp.status_code == 200
     assert state_resp.json()["flood"]["risk_id"] == eval_data["risk_state"]["flood"]["risk_id"]

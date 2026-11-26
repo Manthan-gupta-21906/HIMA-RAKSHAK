@@ -191,7 +191,7 @@ HAZARD_SEVERITY_FACTOR: dict[RiskClass, float] = {
 
 
 class SpatialExposureService:
-    """Computes location exposure profiles from stored geospatial asset layers and hazard outputs."""
+    """Computes location exposure profiles from geospatial asset layers and hazard outputs."""
 
     LAYER_ID = "jk-pilot-exposure-assets"
 
@@ -212,7 +212,7 @@ class SpatialExposureService:
         hazard_assessment: RiskAssessmentContract | None = None,
         radius_km: float = 10.0,
     ) -> LocationExposureProfile:
-        """Intersect stored geospatial layer features near ``location`` and scale by hazard output."""
+        """Intersect geospatial layer features near ``location`` and scale by hazard output."""
         layer = self._geo.get_layer(self.LAYER_ID)
         if layer is None:
             return build_exposure_profile(location.location_id, [], available_layers=[])
@@ -233,12 +233,18 @@ class SpatialExposureService:
                 continue
             centroid = geom.centroid
             # Approximate degree-to-km check (~111 km/deg)
-            dist_km = (((centroid.y - location.latitude) ** 2 + (centroid.x - location.longitude) ** 2) ** 0.5) * 111.0
+            dy = centroid.y - location.latitude
+            dx = centroid.x - location.longitude
+            dist_km = ((dy**2 + dx**2) ** 0.5) * 111.0
             if dist_km > radius_km:
                 continue
 
             feat_hazards = props.get("hazards") or []
-            if target_hazard is not None and feat_hazards and target_hazard.value not in feat_hazards:
+            if (
+                target_hazard is not None
+                and feat_hazards
+                and target_hazard.value not in feat_hazards
+            ):
                 continue
 
             asset_type = str(props.get("asset_type", "settlement"))

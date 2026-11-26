@@ -28,10 +28,18 @@ from app.services.location_service import LocationNotFoundError
 from app.services.risk_orchestrator import RiskOrchestrator
 
 PILOT_TERRAIN_CONTEXT: dict[str, TerrainContext] = {
-    "JK-SGR-01": TerrainContext(elevation_m=1585.0, slope_deg=4.0, aspect_deg=180.0, drainage_density=1.8),
-    "JK-GUL-01": TerrainContext(elevation_m=3980.0, slope_deg=38.0, aspect_deg=45.0, drainage_density=0.9),
-    "JK-BAN-01": TerrainContext(elevation_m=1666.0, slope_deg=32.0, aspect_deg=135.0, drainage_density=1.5),
-    "JK-DRS-01": TerrainContext(elevation_m=3528.0, slope_deg=40.0, aspect_deg=315.0, drainage_density=0.7),
+    "JK-SGR-01": TerrainContext(
+        elevation_m=1585.0, slope_deg=4.0, aspect_deg=180.0, drainage_density=1.8
+    ),
+    "JK-GUL-01": TerrainContext(
+        elevation_m=3980.0, slope_deg=38.0, aspect_deg=45.0, drainage_density=0.9
+    ),
+    "JK-BAN-01": TerrainContext(
+        elevation_m=1666.0, slope_deg=32.0, aspect_deg=135.0, drainage_density=1.5
+    ),
+    "JK-DRS-01": TerrainContext(
+        elevation_m=3528.0, slope_deg=40.0, aspect_deg=315.0, drainage_density=0.7
+    ),
 }
 
 
@@ -40,7 +48,7 @@ def get_pilot_flood_model() -> FloodBaselineClassifier:
     """Return a deterministic pilot-calibrated flood baseline classifier."""
     model = FloodBaselineClassifier(epochs=150, version="flood-baseline-v1")
     # Reproducible pilot calibration samples:
-    # [rain_1h_mm, rain_24h_mm, antecedent_rain_72h_mm, river_level_m, river_level_rate_m_per_h, drainage_density]
+    # [rain_1h, rain_24h, antecedent_72h, river_level, river_rate, drainage_density]
     samples = [
         [2.0, 8.0, 12.0, 1.8, 0.02, 1.0],
         [5.0, 15.0, 20.0, 2.4, 0.05, 1.2],
@@ -63,7 +71,7 @@ def get_pilot_flood_model() -> FloodBaselineClassifier:
 
 
 class RiskEvaluationResponse(BaseModel):
-    """Unified result of the controlled observation -> risk -> exposure -> priority -> alert workflow."""
+    """Unified result of the observation -> risk -> exposure -> priority -> alert workflow."""
 
     location_id: str
     risk_state: LocationRiskState
@@ -132,7 +140,7 @@ class RiskWorkflowService:
         *,
         trigger_alert: bool = True,
     ) -> RiskEvaluationResponse:
-        """Extract features from persisted observations, run hazard pathways, and compute exposure/priority/alerts."""
+        """Extract features from observations, run hazard pathways, and compute priority."""
         location = self._get_location(location_id)
         obs_rows = self._obs_repo.list_by_location(location_id)
         observations = [self._to_obs_contract(r) for r in obs_rows]
@@ -160,7 +168,9 @@ class RiskWorkflowService:
                 cutoff_at=cutoff_at,
                 terrain=terrain,
             )
-            flood_model = get_pilot_flood_model() if self._has_flood_inputs(flood_features) else None
+            flood_model = (
+                get_pilot_flood_model() if self._has_flood_inputs(flood_features) else None
+            )
             self._orchestrator.assess_flood(
                 flood_features,
                 model=flood_model,
@@ -220,7 +230,7 @@ class RiskWorkflowService:
         return self._exposure_service.calculate_exposure(location, primary)
 
     def get_priority(self, location_id: str) -> PriorityAssessment:
-        """Compute explainable priority assessment for a location from its latest hazard + exposure."""
+        """Compute explainable priority for a location from its latest hazard and exposure."""
         location = self._get_location(location_id)
         risk_state = self._orchestrator.get_location_risk_state(location_id)
         primary = self._select_primary_assessment(risk_state)
