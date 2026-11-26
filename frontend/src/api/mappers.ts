@@ -21,12 +21,14 @@ export function mapLocationAndRiskToSector(
       ? (riskState?.avalanche || riskState?.flood || undefined)
       : (riskState?.flood || riskState?.avalanche || undefined);
 
-  let riskTier: RiskTier = "Low";
+  let riskTier: RiskTier = "Unsupported";
   const riskClass = (assessment?.risk_class || riskState?.highest_risk_class || "").toLowerCase();
   if (riskClass === "severe" || riskClass === "high") {
     riskTier = hazardType === "avalanche" ? "Stage 3" : "High Risk";
   } else if (riskClass === "moderate") {
     riskTier = "Moderate";
+  } else if (riskClass === "low") {
+    riskTier = "Low";
   }
 
   let confidence: "High" | "Moderate" | "Low" = "Moderate";

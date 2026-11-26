@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from app.repositories.alert_repository import AlertRepository
 from app.schemas.alert import AlertActionRecord, AlertStatus
-from app.schemas.common import HazardType
+from app.schemas.common import HazardType, PredictionStatus, RiskClass
 from app.schemas.exposure import PriorityAssessment
 from app.schemas.risk import RiskAssessmentContract
 
@@ -44,6 +44,13 @@ class AlertService:
         priority: PriorityAssessment,
     ) -> AlertActionRecord | None:
         """Generate and persist an operational alert when risk/priority warrants action."""
+        if (
+            assessment.prediction_status == PredictionStatus.UNSUPPORTED
+            or assessment.risk_class == RiskClass.UNSUPPORTED
+            or priority.prediction_status == PredictionStatus.UNSUPPORTED
+            or priority.hazard_risk_class == RiskClass.UNSUPPORTED
+        ):
+            return None
         if priority.priority_level not in {"MEDIUM", "HIGH", "CRITICAL"}:
             return None
 

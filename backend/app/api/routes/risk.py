@@ -121,6 +121,11 @@ def get_risk_state(
     response_model=RiskEvaluationResponse,
     summary="Evaluate hazard risk, exposure, priority, and alerts from observations",
 )
+@router.post(
+    "/assess/{location_id}",
+    response_model=RiskEvaluationResponse,
+    summary="Assess hazard risk, exposure, priority, and alerts from observations",
+)
 def evaluate_location_risk(
     location_id: str,
     trigger_alert: bool = Query(

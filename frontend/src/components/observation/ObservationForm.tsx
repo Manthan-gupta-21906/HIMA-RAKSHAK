@@ -5,6 +5,7 @@ import { getSectorById, SECTOR_OPTIONS, type SectorOption } from "../../data/obs
 import { HAZARD_CONFIG, type HazardKind, VALIDATION_ERROR_CODES } from "../../types/observation";
 import { submitObservation, type ObservationContract } from "../../api/observations";
 import { fetchLocations } from "../../api/locations";
+import { evaluateLocationRisk, type RiskEvaluationResponse } from "../../api/risk";
 
 const DEFAULT_SECTOR_ID = "JK-GUL-01";
 const DEFAULT_HAZARD_KIND: HazardKind = "avalanche";
@@ -49,6 +50,8 @@ export function ObservationForm({
     null
   );
   const [submittedRecord, setSubmittedRecord] = useState<ObservationContract | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<RiskEvaluationResponse | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -172,9 +175,21 @@ export function ObservationForm({
       });
       setSubmittedRecord(record);
 
+      const targetLocationId = record.location_id ?? sectorId;
+      try {
+        const evalRes = await evaluateLocationRisk(targetLocationId);
+        setEvaluationResult(evalRes);
+        setEvaluationError(null);
+      } catch (evalErr: unknown) {
+        setEvaluationResult(null);
+        setEvaluationError(
+          evalErr instanceof Error ? evalErr.message : "Risk evaluation unavailable"
+        );
+      }
+
       if (onSubmit) {
         onSubmit({
-          sectorId: record.location_id ?? sectorId,
+          sectorId: targetLocationId,
           sectorName: sector?.name ?? selectedOption?.label ?? sectorId,
           hazardKind,
           value: num,
@@ -205,6 +220,9 @@ export function ObservationForm({
     setObservationValue("");
     setNotes("");
     setError(null);
+    setSubmittedRecord(null);
+    setEvaluationResult(null);
+    setEvaluationError(null);
     setMode("editing");
     inputRef.current?.focus();
   };
@@ -213,6 +231,11 @@ export function ObservationForm({
   const showError = !!error && mode === "editing";
 
   if (mode === "success") {
+    const displayName = sector?.name ?? selectedOption?.label ?? sectorId;
+    const displayId = submittedRecord?.location_id ?? sector?.id ?? sectorId;
+    const highestRisk = evaluationResult?.risk_state?.highest_risk_class;
+    const priorityLevel = evaluationResult?.priority?.priority_level;
+
     return (
       <div className="bg-surface-card rounded-xl border border-border-hairline shadow-xs p-6 sm:p-10 text-center max-w-md mx-auto">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-alert-green/10 text-alert-green mb-4 mx-auto">
@@ -220,8 +243,13 @@ export function ObservationForm({
         </div>
         <h2 className="text-xl font-bold text-text-primary mb-1">Observation Recorded</h2>
         <p className="text-sm text-text-muted mb-6">
-          Field observation for <span className="font-semibold text-text-primary">{sector?.name}</span>
-          has been validated and the hazard model recalculated.
+          Field observation for{" "}
+          <span className="font-semibold text-text-primary">{displayName}</span>{" "}
+          {evaluationResult
+            ? highestRisk === "unsupported"
+              ? "has been persisted. Risk evaluation completed, but prediction remains unsupported due to data or model readiness constraints."
+              : `has been persisted and hazard risk recalculated (${highestRisk}, priority: ${priorityLevel}).`
+            : `has been persisted.${evaluationError ? " Automatic risk recalculation could not be completed." : ""}`}
         </p>
 
         <div className="bg-surface-container-low rounded-lg p-4 text-left mb-6">
@@ -230,7 +258,7 @@ export function ObservationForm({
               Sector
             </span>
             <span className="text-base font-semibold text-text-primary">
-              {sector?.name} ({sector?.id})
+              {displayName} ({displayId})
             </span>
           </div>
           <div className="flex items-baseline gap-2 mb-1">

@@ -184,3 +184,83 @@ def test_end_to_end_observation_to_alert_action_workflow() -> None:
     for w in warnings_resp.json()["items"]:
         assert w["is_read_only"] is True
         assert w["warning_id"] != alert_id
+
+
+def test_assess_endpoint_unified_with_evaluate_and_unsupported_no_alerts(tmp_path: Path) -> None:
+    """Verify /risk/assess matches /risk/evaluate and unsupported predictions create no alerts."""
+    from app.repositories.alert_repository import AlertRepository
+    from app.repositories.risk_repository import RiskAssessmentRepository
+    from app.schemas.common import (
+        FreshnessStatus,
+        HazardType,
+        PredictionStatus,
+        ProvenanceMeta,
+        RiskClass,
+    )
+    from app.schemas.exposure import ExposureCoverageStatus, PriorityAssessment
+    from app.schemas.risk import RiskAssessmentContract
+    from app.services.alert_service import AlertService
+    from app.services.risk_orchestrator import RiskOrchestrator
+
+    headers = _operator_headers()
+
+    # Empty state must default to UNSUPPORTED, never LOW
+    engine = create_db_engine(f"sqlite:///{tmp_path / 'unit_check.db'}")
+    Base.metadata.create_all(bind=engine)
+    session_factory = get_session_factory(engine)
+    with session_factory() as db:
+        orch = RiskOrchestrator(RiskAssessmentRepository(db))
+        empty_state = orch.get_location_risk_state("JK-DRS-01")
+        assert empty_state.highest_risk_class == RiskClass.UNSUPPORTED
+
+        # Unsupported prediction must never create an alert even with elevated priority_level
+        now = datetime.now(UTC)
+        unsupported_assessment = RiskAssessmentContract(
+            risk_id="risk-unsupported-test",
+            location_id="JK-DRS-01",
+            hazard_type=HazardType.AVALANCHE,
+            risk_class=RiskClass.UNSUPPORTED,
+            score=None,
+            confidence=0.0,
+            lead_time_hours=12,
+            freshness=FreshnessStatus.UNKNOWN,
+            prediction_status=PredictionStatus.UNSUPPORTED,
+            readiness_reason="Missing snowpack telemetry",
+            assessed_at=now,
+            provenance=ProvenanceMeta(
+                source_id="src-dgre-01",
+                source_name="DGRE",
+                licence="GODL",
+                is_demo_fixture=False,
+                ingested_at=now,
+            ),
+        )
+        misleading_priority = PriorityAssessment(
+            location_id="JK-DRS-01",
+            evaluated_at=now,
+            hazard_score=None,
+            hazard_risk_class=RiskClass.UNSUPPORTED,
+            exposure_score=0.8,
+            impact_score=0.8,
+            priority_score=0.4,
+            coverage_status=ExposureCoverageStatus.COMPLETE,
+            priority_level="HIGH",
+            confidence=0.0,
+            freshness=FreshnessStatus.UNKNOWN,
+            prediction_status=PredictionStatus.UNSUPPORTED,
+            weights_used={"hazard_weight": 0.5, "impact_weight": 0.5},
+            breakdown={"hazard_effective": 0.0, "impact_total": 0.8},
+        )
+        alert_service = AlertService(AlertRepository(db))
+        assert (
+            alert_service.generate_for_assessment(unsupported_assessment, misleading_priority)
+            is None
+        )
+
+    # /risk/assess/{location_id} runs the unified evaluation pipeline
+    assess_resp = client.post("/risk/assess/JK-DRS-01", headers=headers)
+    assert assess_resp.status_code == 200
+    assess_data = assess_resp.json()
+    assert assess_data["location_id"] == "JK-DRS-01"
+    assert assess_data["risk_state"]["highest_risk_class"] == "unsupported"
+    assert assess_data["alert"] is None

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
+import { evaluateLocationRisk } from "../../api/risk";
 
 // Mock the observations API so form submission succeeds without a live backend.
 vi.mock("../../api/observations", async (importOriginal) => {
@@ -33,6 +34,37 @@ vi.mock("../../api/observations", async (importOriginal) => {
       value: 48.0,
       unit: "cm",
       is_demo_fixture: false,
+    }),
+  };
+});
+
+vi.mock("../../api/risk", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/risk")>();
+  return {
+    ...actual,
+    evaluateLocationRisk: vi.fn().mockResolvedValue({
+      location_id: "JK-GUL-01",
+      risk_state: {
+        location_id: "JK-GUL-01",
+        updated_at: new Date().toISOString(),
+        highest_risk_class: "moderate",
+      },
+      exposure: {
+        location_id: "JK-GUL-01",
+        population_exposed: 1200,
+        roads_exposed_km: 4.5,
+        critical_facilities_count: 1,
+        coverage_status: "supported",
+      },
+      priority: {
+        location_id: "JK-GUL-01",
+        priority_level: "MEDIUM",
+        priority_score: 0.42,
+        hazard_risk_class: "moderate",
+        prediction_status: "indicative",
+        explanation: [],
+      },
+      alert: null,
     }),
   };
 });
@@ -117,6 +149,46 @@ describe("FieldObservationPage", () => {
     await screen.findByText(/48\.0 cm snow/i);
     expect(screen.getByRole("heading", { name: /observation recorded/i })).toBeInTheDocument();
     expect(screen.getByText(/48\.0 cm snow/i)).toBeInTheDocument();
+    expect(evaluateLocationRisk).toHaveBeenCalledWith("JK-GUL-01");
+    expect(screen.getByText(/hazard risk recalculated \(moderate, priority: MEDIUM\)/i)).toBeInTheDocument();
+  });
+
+  it("reports unsupported prediction honestly when evaluation remains unsupported", async () => {
+    vi.mocked(evaluateLocationRisk).mockResolvedValueOnce({
+      location_id: "JK-GUL-01",
+      risk_state: {
+        location_id: "JK-GUL-01",
+        updated_at: new Date().toISOString(),
+        highest_risk_class: "unsupported",
+      },
+      exposure: {
+        location_id: "JK-GUL-01",
+        population_exposed: 0,
+        roads_exposed_km: 0,
+        critical_facilities_count: 0,
+        coverage_status: "supported",
+      },
+      priority: {
+        location_id: "JK-GUL-01",
+        priority_level: "LOW",
+        priority_score: 0.0,
+        hazard_risk_class: "unsupported",
+        prediction_status: "unsupported",
+        explanation: [],
+      },
+      alert: null,
+    });
+
+    const user = userEvent.setup();
+    seedSession("/field-log?sector=JK-GUL-01&hazard=avalanche");
+    render(<App />);
+
+    const input = screen.getByLabelText(/fresh snow accumulation/i);
+    await user.clear(input);
+    await user.type(input, "48.0");
+    await user.click(screen.getByRole("button", { name: /risk state/i }));
+
+    await screen.findByText(/prediction remains unsupported/i);
   });
 
   it("rejects out-of-range values", async () => {
