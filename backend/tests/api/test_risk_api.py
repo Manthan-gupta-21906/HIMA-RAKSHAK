@@ -233,3 +233,69 @@ def test_invalid_risk_query_params_return_422() -> None:
     assert res.status_code == 422
     err = res.json()
     assert err["error_code"] == "VALIDATION_ERROR"
+
+
+def test_assess_location_risk_requires_operator_auth() -> None:
+    # Unauthenticated -> 401
+    res_unauth = client.post("/risk/assess/JK-SGR-01")
+    assert res_unauth.status_code == 401
+    assert res_unauth.json()["error_code"] == "HTTP_401"
+
+    # Viewer -> 403
+    viewer_token = create_access_token("viewer1", "viewer")
+    res_viewer = client.post(
+        "/risk/assess/JK-SGR-01",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+    assert res_viewer.status_code == 403
+    assert res_viewer.json()["error_code"] == "HTTP_403"
+
+
+def test_assess_location_risk_missing_location_returns_404() -> None:
+    op_token = create_access_token("op1", "district_operator")
+    res = client.post(
+        "/risk/assess/JK-MISSING-99",
+        headers={"Authorization": f"Bearer {op_token}"},
+    )
+    assert res.status_code == 404
+    err = res.json()
+    assert err["error_code"] == "HTTP_404"
+    assert "JK-MISSING-99" in err["message"]
+
+
+def test_assess_location_risk_persists_and_updates_retrieval_endpoints() -> None:
+    op_token = create_access_token("op1", "district_operator")
+    headers = {"Authorization": f"Bearer {op_token}"}
+    cutoff_iso = "2026-11-26T18:00:00Z"
+
+    res = client.post(
+        "/risk/assess/JK-SGR-01",
+        json={"cutoff_at": cutoff_iso},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    state = res.json()
+    assert state["location_id"] == "JK-SGR-01"
+    assert state["flood"] is not None
+    assert state["flood"]["prediction_status"] == "unsupported"
+    assert state["flood"]["score"] is None
+    assert state["avalanche"] is not None
+    assert state["avalanche"]["prediction_status"] == "unsupported"
+    assert state["avalanche"]["score"] is None
+
+    # Verify newly persisted assessments are returned by /risk/current and /risk/state
+    current_res = client.get("/risk/current/JK-SGR-01", headers=headers)
+    assert current_res.status_code == 200
+    current = current_res.json()
+    assert current["flood"]["risk_id"] == state["flood"]["risk_id"]
+    assert current["avalanche"]["risk_id"] == state["avalanche"]["risk_id"]
+
+    state_res = client.get("/risk/state/JK-SGR-01", headers=headers)
+    assert state_res.status_code == 200
+    assert state_res.json()["flood"]["risk_id"] == state["flood"]["risk_id"]
+
+    history_res = client.get("/risk/history/JK-SGR-01", headers=headers)
+    assert history_res.status_code == 200
+    history_ids = {item["risk_id"] for item in history_res.json()["items"]}
+    assert state["flood"]["risk_id"] in history_ids
+    assert state["avalanche"]["risk_id"] in history_ids

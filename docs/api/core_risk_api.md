@@ -21,6 +21,7 @@ Protected endpoints support:
 | `GET /risk/current/{id}` | GET | `viewer`, `district_operator`, or `admin` |
 | `GET /risk/history/{id}` | GET | `viewer`, `district_operator`, or `admin` |
 | `GET /risk/state/{id}` | GET | `viewer`, `district_operator`, or `admin` |
+| `POST /risk/assess/{id}` | POST | `district_operator` or `admin` |
 
 ---
 
@@ -172,3 +173,15 @@ Paginated historical log of risk assessments for auditability and trend tracking
 
 #### `GET /risk/state/{location_id}`
 Returns the compiled multi-hazard spatial state for the location, with `highest_risk_class` and `primary_hazard` resolved deterministically while preserving separate hazard pathways.
+
+#### `POST /risk/assess/{location_id}`
+Triggers the multi-hazard risk assessment pipeline for `location_id` using persisted observations up to `cutoff_at` (defaults to current UTC time). Executes separate flood and avalanche feature extraction and `RiskOrchestrator` pathways, persists results, and returns the compiled `LocationRiskState`.
+
+- **Required Role:** `district_operator` or `admin`
+- **Optional Request Body:**
+  ```json
+  {
+    "cutoff_at": "2026-11-26T12:00:00Z"
+  }
+  ```
+- **Responses:** `200 OK` (`LocationRiskState`), `401 Unauthorized`, `403 Forbidden`, `404 Not Found` (unknown `location_id`).

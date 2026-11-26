@@ -59,3 +59,9 @@ class RiskHistoryResponse(BaseModel):
     total: int
     items: list[RiskAssessmentContract]
     pagination: PaginationMeta | None = None
+
+
+class RiskAssessmentRequest(BaseModel):
+    """Optional parameters for triggering a multi-hazard risk assessment."""
+
+    cutoff_at: AwareDatetime | None = None
