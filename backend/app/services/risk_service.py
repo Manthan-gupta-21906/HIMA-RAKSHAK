@@ -279,7 +279,10 @@ class RiskService:
         since: datetime | None = None,
         limit_per_location: int = 50,
     ) -> list[HistoricalReplayEvent]:
-        """Reconstruct chronological replay sequences from persisted risk and observation history."""
+        """Reconstruct chronological replay sequences.
+
+        Uses persisted risk and observation history.
+        """
         if location_id is not None:
             loc = self._location_repo.get_by_id(location_id)
             if loc is None:

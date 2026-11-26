@@ -66,7 +66,11 @@ class IngestionScheduler:
     def _default_fetch_csv(source: SourceModel) -> str | Path:
         """Resolve CSV payload or fixture path for a source."""
         url = (source.reference_url or "").strip()
-        if source.access_mode == "live" and url.startswith(("http://", "https://")) and url.endswith(".csv"):
+        if (
+            source.access_mode == "live"
+            and url.startswith(("http://", "https://"))
+            and url.endswith(".csv")
+        ):
             with urllib_request.urlopen(url, timeout=10.0) as resp:
                 return resp.read().decode("utf-8")
         if DEFAULT_SAMPLE_CSV.exists():

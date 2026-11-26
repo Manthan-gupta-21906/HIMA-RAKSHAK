@@ -22,7 +22,10 @@ class AlertNotFoundError(LookupError):
 
 
 class AlertService:
-    """Generates, persists, delivers, and manages operational alerts distinct from official warnings."""
+    """Generates, persists, delivers, and manages operational alerts.
+
+    Operational alerts are distinct from official warnings.
+    """
 
     def __init__(
         self,
