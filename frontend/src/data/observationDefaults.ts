@@ -44,11 +44,10 @@ export const DEFAULT_OBSERVER: ObserverIdentity = {
 };
 
 export const THREAT_ADVISORY: Record<string, ThreatAdvisory> = {
-  "JK-PN-04": { kind: "avalanche", label: "Avalanche Stage-2 (Orange Alert)", tier: "Stage 2" },
-  "JK-BM-12": { kind: "avalanche", label: "Avalanche Stage-3 (Red Alert)", tier: "Stage 3" },
-  "JK-KP-08": { kind: "avalanche", label: "Avalanche Watch (Moderate)", tier: "Watch" },
-  "JK-AN-02": { kind: "flood", label: "Riverine Flood Watch", tier: "Watch" },
-  "JK-BD-09": { kind: "avalanche", label: "Snowpack Stability Advisory", tier: "Low" },
+  "JK-SGR-01": { kind: "flood", label: "Riverine Flood Watch (Moderate)", tier: "Moderate" },
+  "JK-GUL-01": { kind: "avalanche", label: "Avalanche Stage-3 (Red Alert)", tier: "Stage 3" },
+  "JK-BAN-01": { kind: "flood", label: "NH-44 Dual-Hazard Corridor Watch", tier: "Watch" },
+  "JK-DRS-01": { kind: "avalanche", label: "Unsupported Sensor Coverage", tier: "Unsupported" },
 };
 
 export function getSectorById(sectorId: string): MonitoringSector | undefined {

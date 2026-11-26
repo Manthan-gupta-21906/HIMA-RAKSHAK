@@ -46,10 +46,10 @@ describe("HazardMap", () => {
 
     fireEvent.click(pins[1]);
 
-    expect(screen.getByText("Gulmarg - Affarwat")).toBeInTheDocument();
+    expect(screen.getByText("Gulmarg — Affarwat Ridge")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view details/i })).toHaveAttribute(
       "href",
-      "/locations/JK-BM-12"
+      "/locations/JK-GUL-01"
     );
   });
 });

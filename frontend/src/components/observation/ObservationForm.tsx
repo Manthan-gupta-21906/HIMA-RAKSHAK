@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../ui/Button";
-import { getSectorById, SECTOR_OPTIONS } from "../../data/observationDefaults";
+import { getSectorById, SECTOR_OPTIONS, type SectorOption } from "../../data/observationDefaults";
 import { HAZARD_CONFIG, type HazardKind, VALIDATION_ERROR_CODES } from "../../types/observation";
 import { submitObservation, type ObservationContract } from "../../api/observations";
+import { fetchLocations } from "../../api/locations";
 
-const DEFAULT_SECTOR_ID = "JK-PN-04";
+const DEFAULT_SECTOR_ID = "JK-GUL-01";
 const DEFAULT_HAZARD_KIND: HazardKind = "avalanche";
 
 type FormMode = "editing" | "submitting" | "success";
@@ -13,6 +14,7 @@ type FormMode = "editing" | "submitting" | "success";
 interface ObservationFormProps {
   initialSectorId?: string;
   initialHazardKind?: HazardKind;
+  onSectorChange?: (sectorId: string) => void;
   onSubmit?: (result: {
     sectorId: string;
     sectorName: string;
@@ -20,6 +22,7 @@ interface ObservationFormProps {
     value: number;
     unit: string;
     notes: string;
+    record?: ObservationContract;
   }) => void;
 }
 
@@ -27,6 +30,7 @@ interface ObservationFormProps {
 export function ObservationForm({
   initialSectorId,
   initialHazardKind,
+  onSectorChange,
   onSubmit,
 }: ObservationFormProps) {
   const [searchParams] = useSearchParams();
@@ -35,6 +39,7 @@ export function ObservationForm({
   const [sectorId, setSectorId] = useState(
     initialSectorId ?? searchParams.get("sector") ?? DEFAULT_SECTOR_ID
   );
+  const [sectorOptions, setSectorOptions] = useState<SectorOption[]>(SECTOR_OPTIONS);
   const [hazardKind, setHazardKind] = useState<HazardKind>(
     (searchParams.get("hazard") as HazardKind) ?? initialHazardKind ?? DEFAULT_HAZARD_KIND
   );
@@ -45,14 +50,41 @@ export function ObservationForm({
   );
   const [submittedRecord, setSubmittedRecord] = useState<ObservationContract | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    fetchLocations()
+      .then((res) => {
+        if (!active || !res?.items?.length) return;
+        setSectorOptions(
+          res.items.map((loc) => ({
+            value: loc.location_id,
+            label: `${loc.name} (${loc.location_id}) • ${loc.admin_unit}`,
+            elevation: "",
+          }))
+        );
+      })
+      .catch(() => {
+        // Keep fallback options when offline/unit testing
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const sector = useMemo(() => getSectorById(sectorId), [sectorId]);
+  const selectedOption = useMemo(
+    () => sectorOptions.find((o) => o.value === sectorId),
+    [sectorOptions, sectorId]
+  );
   const config = HAZARD_CONFIG[hazardKind];
   const inputRef = useRef<HTMLInputElement>(null);
 
   const clearError = useCallback(() => setError(null), []);
 
   const handleSectorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSectorId(event.target.value);
+    const next = event.target.value;
+    setSectorId(next);
+    onSectorChange?.(next);
     clearError();
   };
 
@@ -142,12 +174,13 @@ export function ObservationForm({
 
       if (onSubmit) {
         onSubmit({
-          sectorId: sector?.id ?? sectorId,
-          sectorName: sector?.name ?? "Unknown Sector",
+          sectorId: record.location_id ?? sectorId,
+          sectorName: sector?.name ?? selectedOption?.label ?? sectorId,
           hazardKind,
           value: num,
           unit: config.unit,
           notes,
+          record,
         });
       }
 
@@ -260,7 +293,7 @@ export function ObservationForm({
             disabled={isDisabled}
             className="w-full h-10 px-3.5 pr-10 rounded-lg bg-surface-container-low border border-border-hairline text-text-primary text-xs sm:text-sm focus:border-primary focus:outline-none focus:ring-1 focus-ring focus:ring-primary/20 cursor-pointer appearance-none transition-all"
           >
-            {SECTOR_OPTIONS.map((option) => (
+            {sectorOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

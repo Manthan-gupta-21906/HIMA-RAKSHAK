@@ -8,9 +8,25 @@ vi.mock("../../api/observations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/observations")>();
   return {
     ...actual,
+    fetchObservations: vi.fn().mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          observation_id: "obs-test-persisted-1",
+          location_id: "JK-GUL-01",
+          source_id: "src-field-obs",
+          observed_at: new Date().toISOString(),
+          metric: "snow_depth_cm",
+          value: 48.0,
+          unit: "cm",
+          is_demo_fixture: false,
+        },
+      ],
+      pagination: { total: 1, page: 1, page_size: 5, has_next: false },
+    }),
     submitObservation: vi.fn().mockResolvedValue({
       observation_id: "obs-test-mock",
-      location_id: "JK-BM-12",
+      location_id: "JK-GUL-01",
       source_id: "src-field-obs",
       observed_at: new Date().toISOString(),
       metric: "snow_depth_cm",
@@ -89,7 +105,7 @@ describe("FieldObservationPage", () => {
 
   it("transitions to success state on valid submission", async () => {
     const user = userEvent.setup();
-    seedSession("/field-log?sector=JK-BM-12&hazard=avalanche");
+    seedSession("/field-log?sector=JK-GUL-01&hazard=avalanche");
     render(<App />);
 
     const input = screen.getByLabelText(/fresh snow accumulation/i);

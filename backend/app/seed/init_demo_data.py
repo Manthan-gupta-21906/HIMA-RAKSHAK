@@ -21,6 +21,7 @@ from app.ingestion.warning_import import (
     import_warning_record,
     load_sample_warning_fixtures,
 )
+from app.models.alert import AlertActionModel  # noqa: F401
 from app.models.location import LocationModel
 from app.models.observation import ObservationModel
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401

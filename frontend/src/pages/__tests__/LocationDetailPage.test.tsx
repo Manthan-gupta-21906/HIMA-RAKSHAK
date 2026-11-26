@@ -23,7 +23,7 @@ describe("LocationDetailPage", () => {
   });
 
   it("renders flood and avalanche as independent assessment cards", () => {
-    seedSession("/locations/JK-BM-12");
+    seedSession("/locations/JK-GUL-01");
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Gulmarg - Affarwat Ridge" })).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe("LocationDetailPage", () => {
   });
 
   it("shows the avalanche readiness gate when snowpack coverage is insufficient", () => {
-    seedSession("/locations/JK-PN-04");
+    seedSession("/locations/JK-SGR-01");
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Poonch - Surankote Valley" })).toBeInTheDocument();
@@ -55,16 +55,16 @@ describe("LocationDetailPage", () => {
   });
 
   it("links each engine to the pre-filled field observation form", () => {
-    seedSession("/locations/JK-BM-12");
+    seedSession("/locations/JK-GUL-01");
     render(<App />);
 
     expect(screen.getByRole("link", { name: /log observation/i })).toHaveAttribute(
       "href",
-      "/field-log?sector=JK-BM-12&hazard=avalanche"
+      "/field-log?sector=JK-GUL-01&hazard=avalanche"
     );
     expect(screen.getByRole("link", { name: /log gauge data/i })).toHaveAttribute(
       "href",
-      "/field-log?sector=JK-BM-12&hazard=flood"
+      "/field-log?sector=JK-GUL-01&hazard=flood"
     );
   });
 

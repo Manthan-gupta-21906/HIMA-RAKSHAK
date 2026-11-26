@@ -25,10 +25,10 @@ describe("DashboardShell & OverviewPage", () => {
     expect(screen.getByText("DDMA Control Room")).toBeInTheDocument();
     expect(screen.getByText("MG")).toBeInTheDocument();
     expect(screen.getByText("Regional Hazard Monitor")).toBeInTheDocument();
-    expect(screen.getByText("Poonch - Surankote")).toBeInTheDocument();
-    expect(screen.getByText("Gulmarg - Affarwat")).toBeInTheDocument();
-    expect(screen.getByText("Kupwara - Machil")).toBeInTheDocument();
-    expect(screen.getByText(/3h ago • stale/i)).toBeInTheDocument();
+    expect(screen.getByText("Srinagar — Jhelum Floodplain")).toBeInTheDocument();
+    expect(screen.getByText("Gulmarg — Affarwat Ridge")).toBeInTheDocument();
+    expect(screen.getByText("Banihal — NH-44 Corridor")).toBeInTheDocument();
+    expect(screen.getByText(/2h ago • stale/i)).toBeInTheDocument();
   });
 
   it("navigates across sidebar routes and toggles mobile drawer", async () => {

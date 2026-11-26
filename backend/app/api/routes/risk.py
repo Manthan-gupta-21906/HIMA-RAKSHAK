@@ -6,14 +6,16 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import require_any_authenticated
+from app.auth import require_any_authenticated, require_operator
 from app.db.session import get_db
+from app.models.alert import AlertActionModel  # noqa: F401
 from app.models.location import LocationModel  # noqa: F401
 from app.models.observation import ObservationModel  # noqa: F401
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
 from app.models.source import SourceModel  # noqa: F401
 from app.repositories.risk_repository import RiskAssessmentRepository
 from app.schemas.common import HazardType, PaginationMeta
+from app.schemas.exposure import LocationExposureProfile, PriorityAssessment
 from app.schemas.risk import (
     LocationRiskState,
     RiskAssessmentContract,
@@ -21,6 +23,7 @@ from app.schemas.risk import (
 )
 from app.services.location_service import LocationNotFoundError
 from app.services.risk_service import RiskService
+from app.services.risk_workflow import RiskEvaluationResponse, RiskWorkflowService
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
@@ -31,6 +34,10 @@ def _get_db() -> Generator[Session, None, None]:
 
 def get_risk_service(db: Session = Depends(_get_db)) -> RiskService:
     return RiskService(RiskAssessmentRepository(db))
+
+
+def get_risk_workflow_service(db: Session = Depends(_get_db)) -> RiskWorkflowService:
+    return RiskWorkflowService(db)
 
 
 @router.get(
@@ -102,6 +109,70 @@ def get_risk_state(
     """Return the co-located multi-hazard spatial state keeping hazard outputs distinct."""
     try:
         return service.get_location_risk_state(location_id)
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/evaluate/{location_id}",
+    response_model=RiskEvaluationResponse,
+    summary="Evaluate hazard risk, exposure, priority, and alerts from observations",
+)
+def evaluate_location_risk(
+    location_id: str,
+    trigger_alert: bool = Query(
+        default=True,
+        description="Whether to persist an operational alert if priority warrants action",
+    ),
+    _user: object = Depends(require_operator),
+    workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
+) -> RiskEvaluationResponse:
+    """Controlled assessment workflow extracting features from persisted observations."""
+    try:
+        return workflow.evaluate_location(location_id, trigger_alert=trigger_alert)
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/exposure/{location_id}",
+    response_model=LocationExposureProfile,
+    summary="Spatial exposure profile for a location",
+)
+def get_location_exposure(
+    location_id: str,
+    _user: object = Depends(require_any_authenticated),
+    workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
+) -> LocationExposureProfile:
+    """Calculate affected population, infrastructure, and critical assets from geospatial layers."""
+    try:
+        return workflow.get_exposure(location_id)
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/priority/{location_id}",
+    response_model=PriorityAssessment,
+    summary="Explainable risk priority assessment for a location",
+)
+def get_location_priority(
+    location_id: str,
+    _user: object = Depends(require_any_authenticated),
+    workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
+) -> PriorityAssessment:
+    """Generate explainable priority record combining hazard, exposure, confidence, and readiness."""
+    try:
+        return workflow.get_priority(location_id)
     except LocationNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
