@@ -1,5 +1,7 @@
 """FastAPI application entrypoint for HIMA-RAKSHAK."""
 
+import logging
+
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +15,8 @@ from app.api.routes.sources import router as sources_router
 from app.api.routes.warnings import router as warnings_router
 from app.config import Settings, get_settings
 from app.core.errors import ErrorDetail, build_error_envelope
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -67,6 +71,18 @@ def create_app() -> FastAPI:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=data,
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, _exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        envelope = build_error_envelope(
+            error_code="INTERNAL_ERROR",
+            message="An unexpected internal error occurred.",
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=envelope.model_dump(mode="json"),
         )
 
     @app.get("/health", tags=["system"])
