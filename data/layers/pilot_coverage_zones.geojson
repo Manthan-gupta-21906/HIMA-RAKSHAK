@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "JK-SGR-01",
+      "properties": {
+        "location_id": "JK-SGR-01",
+        "name": "Srinagar Pilot Zone",
+        "hazard_focus": "flood",
+        "admin_unit": "Srinagar, Jammu & Kashmir"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [74.70, 34.00],
+            [75.00, 34.00],
+            [75.00, 34.20],
+            [74.70, 34.20],
+            [74.70, 34.00]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "UK-JSH-01",
+      "properties": {
+        "location_id": "UK-JSH-01",
+        "name": "Joshimath Pilot Zone",
+        "hazard_focus": "flood_and_slope",
+        "admin_unit": "Chamoli, Uttarakhand"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.50, 30.50],
+            [79.70, 30.50],
+            [79.70, 30.70],
+            [79.50, 30.70],
+            [79.50, 30.50]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LA-DRS-01",
+      "properties": {
+        "location_id": "LA-DRS-01",
+        "name": "Drass Pilot Zone",
+        "hazard_focus": "avalanche",
+        "admin_unit": "Kargil, Ladakh"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.60, 34.30],
+            [75.90, 34.30],
+            [75.90, 34.60],
+            [75.60, 34.60],
+            [75.60, 34.30]
+          ]
+        ]
+      }
+    }
+  ]
+}
