@@ -115,6 +115,8 @@ class ObservationService:
             ingested_at=datetime.now(UTC),
         )
         saved = self._repo.save(model)
+        db.commit()
+        db.refresh(saved)
         return model_to_contract(saved)
 
     def list_observations(

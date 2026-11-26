@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { fetchObservations, type ObservationContract } from "../api/observations";
 import { ObservationForm } from "../components/observation/ObservationForm";
 import { Badge } from "../components/ui/Badge";
 import { SECTOR_OPTIONS } from "../data/observationDefaults";
@@ -29,8 +31,30 @@ export function FieldObservationPage() {
   const [searchParams] = useSearchParams();
   const sectorFromUrl = searchParams.get("sector");
   const hazardFromUrl = searchParams.get("hazard");
+  const [activeSectorId, setActiveSectorId] = useState(sectorFromUrl ?? "JK-GUL-01");
+  const [observations, setObservations] = useState<ObservationContract[]>([]);
+  const [obsLoading, setObsLoading] = useState(false);
+  const [obsError, setObsError] = useState<string | null>(null);
 
-  const defaultSector = SECTOR_OPTIONS.find((option) => option.value === sectorFromUrl);
+  const defaultSector = SECTOR_OPTIONS.find((option) => option.value === activeSectorId);
+
+  const loadObservations = useCallback(async (locationId: string) => {
+    setObsLoading(true);
+    setObsError(null);
+    try {
+      const res = await fetchObservations({ location_id: locationId, page_size: 5 });
+      setObservations(res.items ?? []);
+    } catch (err: unknown) {
+      setObsError(err instanceof Error ? err.message : "Unable to load persisted observations");
+      setObservations([]);
+    } finally {
+      setObsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadObservations(activeSectorId);
+  }, [activeSectorId, loadObservations]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -98,11 +122,59 @@ export function FieldObservationPage() {
             initialHazardKind={
               (hazardFromUrl === "flood" ? "flood" : "avalanche") as "avalanche" | "flood"
             }
+            onSectorChange={(nextSectorId) => setActiveSectorId(nextSectorId)}
             onSubmit={(result) => {
-              // Demo hook: in production this posts to the backend observation API.
-              void result;
+              setActiveSectorId(result.sectorId);
+              void loadObservations(result.sectorId);
             }}
           />
+
+          <section
+            aria-label="Persisted Observations"
+            className="mt-6 pt-5 border-t border-border-hairline"
+          >
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                Recent Persisted Observations ({activeSectorId})
+              </h2>
+              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                Live Backend Ledger
+              </span>
+            </div>
+            {obsLoading && (
+              <p className="text-xs text-text-muted">Loading persisted observations…</p>
+            )}
+            {!obsLoading && obsError && (
+              <p className="text-xs text-emergency-red">{obsError}</p>
+            )}
+            {!obsLoading && !obsError && observations.length === 0 && (
+              <p className="text-xs text-text-muted">
+                No persisted observations recorded yet for {activeSectorId}.
+              </p>
+            )}
+            {!obsLoading && observations.length > 0 && (
+              <ul className="divide-y divide-border-hairline rounded-lg border border-border-hairline bg-surface-container-low">
+                {observations.map((obs) => (
+                  <li
+                    key={obs.observation_id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-xs"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-text-primary">
+                        {obs.metric}: {obs.value} {obs.unit}
+                      </span>
+                      <span className="text-[10px] text-text-muted">
+                        ID: {obs.observation_id} • Source: {obs.source_id}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-text-muted tabular-nums">
+                      {new Date(obs.observed_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <footer className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 px-1">
             {PROTOCOL_CHIPS.map((chip) => (

@@ -5,8 +5,8 @@ import type { LocationDetail } from "../types/location";
  * must not be presented as live IMD / CWC / DGRE observations.
  */
 export const LOCATION_DETAILS: Record<string, LocationDetail> = {
-  "JK-PN-04": {
-    sectorId: "JK-PN-04",
+  "JK-SGR-01": {
+    sectorId: "JK-SGR-01",
     title: "Poonch - Surankote Valley",
     subtitle: "Flash-flood monitoring — rainfall, river gauge, and downstream exposure.",
     updatedAgo: "8m ago",
@@ -156,8 +156,8 @@ export const LOCATION_DETAILS: Record<string, LocationDetail> = {
     },
   },
 
-  "JK-BM-12": {
-    sectorId: "JK-BM-12",
+  "JK-GUL-01": {
+    sectorId: "JK-GUL-01",
     title: "Gulmarg - Affarwat Ridge",
     subtitle: "High-altitude sector monitoring — Avalanche & Snowpack risk assessment.",
     updatedAgo: "14m ago",
@@ -311,8 +311,8 @@ export const LOCATION_DETAILS: Record<string, LocationDetail> = {
     },
   },
 
-  "JK-KP-08": {
-    sectorId: "JK-KP-08",
+  "JK-BAN-01": {
+    sectorId: "JK-BAN-01",
     title: "Kupwara - Machil Sector",
     subtitle: "Remote avalanche watch — snowpack, pass access, and telemetry coverage.",
     updatedAgo: "3h ago • Stale",
@@ -470,8 +470,8 @@ export const LOCATION_DETAILS: Record<string, LocationDetail> = {
     },
   },
 
-  "JK-AN-02": {
-    sectorId: "JK-AN-02",
+  "JK-DRS-01": {
+    sectorId: "JK-DRS-01",
     title: "Anantnag - Sangam Gauge",
     subtitle: "Riverine flood watch — Jhelum gauge, rainfall, and corridor exposure.",
     updatedAgo: "5m ago",

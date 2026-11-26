@@ -67,6 +67,28 @@ def calculate_priority_assessment(
 
     priority_level = classify_priority_level(priority_score, hazard_assessment.risk_class)
 
+    explanation = [
+        (
+            f"Hazard ({hazard_assessment.hazard_type.value}): "
+            f"risk_class={hazard_assessment.risk_class.value}, "
+            f"effective_score={round(h_score, 3)}"
+        ),
+        (
+            f"Exposure ({exposure_profile.coverage_status.value}): "
+            f"pop={exposure_profile.population_exposed}, "
+            f"roads={exposure_profile.roads_exposed_km} km, "
+            f"critical_facilities={exposure_profile.critical_facilities_count}, "
+            f"impact_score={impact_score}"
+        ),
+        (
+            f"Readiness & Quality: status={hazard_assessment.prediction_status.value}, "
+            f"freshness={hazard_assessment.freshness.value}, "
+            f"confidence={round(hazard_assessment.confidence, 2)}"
+        ),
+    ]
+    if hazard_assessment.readiness_reason:
+        explanation.append(f"Readiness note: {hazard_assessment.readiness_reason}")
+
     return PriorityAssessment(
         location_id=hazard_assessment.location_id,
         evaluated_at=hazard_assessment.assessed_at,
@@ -77,6 +99,10 @@ def calculate_priority_assessment(
         priority_score=priority_score,
         coverage_status=exposure_profile.coverage_status,
         priority_level=priority_level,
+        confidence=hazard_assessment.confidence,
+        freshness=hazard_assessment.freshness,
+        prediction_status=hazard_assessment.prediction_status,
         weights_used=w,
         breakdown=breakdown,
+        explanation=explanation,
     )

@@ -59,7 +59,7 @@ export const MOCK_REPLAY_EVENTS: HistoricalEvent[] = [
   {
     id: "EVT-GULMARG-2024",
     title: "Affarwat Ridge Avalanche Cycle (Sample Reconstruction)",
-    sector: "Gulmarg - Affarwat (JK-BM-12)",
+    sector: "Gulmarg - Affarwat (JK-GUL-01)",
     hazard: "avalanche",
     dateRange: "2024-02-18 to 2024-02-20",
     provenance: "Historical Sample Reconstruction (DGRE Archival Reference)",

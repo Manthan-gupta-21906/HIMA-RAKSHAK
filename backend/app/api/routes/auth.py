@@ -5,6 +5,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+import app.models  # noqa: F401
 from app.auth import get_current_user
 from app.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password

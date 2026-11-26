@@ -4,7 +4,12 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-from app.schemas.common import AwareDatetime, RiskClass
+from app.schemas.common import (
+    AwareDatetime,
+    FreshnessStatus,
+    PredictionStatus,
+    RiskClass,
+)
 
 
 class ExposureCoverageStatus(StrEnum):
@@ -62,5 +67,9 @@ class PriorityAssessment(BaseModel):
     priority_score: float = Field(ge=0.0, le=1.0)
     coverage_status: ExposureCoverageStatus
     priority_level: str  # "CRITICAL", "HIGH", "MEDIUM", "LOW"
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    freshness: FreshnessStatus = FreshnessStatus.UNKNOWN
+    prediction_status: PredictionStatus = PredictionStatus.UNSUPPORTED
     weights_used: dict[str, float]
     breakdown: dict[str, float]
+    explanation: list[str] = Field(default_factory=list)

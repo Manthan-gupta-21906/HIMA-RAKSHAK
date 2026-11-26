@@ -5,6 +5,7 @@ from collections.abc import Generator
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+import app.models  # noqa: F401
 from app.auth import require_admin, require_any_authenticated
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory

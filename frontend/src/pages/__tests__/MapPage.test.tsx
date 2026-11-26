@@ -46,28 +46,28 @@ describe("MapPage", () => {
     render(<App />);
 
     expect(screen.getByText("Multi-Hazard Risk Map")).toBeInTheDocument();
-    expect(screen.getByText("Showing 5 of 5 sectors")).toBeInTheDocument();
+    expect(screen.getByText("Showing 4 of 4 sectors")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^flood pathway$/i }));
-    expect(screen.getByText("Showing 2 of 5 sectors")).toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 4 sectors")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^avalanche pathway$/i }));
-    expect(screen.getByText("Showing 3 of 5 sectors")).toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 4 sectors")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /stale only/i }));
-    expect(screen.getByText("Showing 1 of 5 sectors")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Kupwara - Machil" })).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 4 sectors")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Drass — Zojila High Pass" })).toBeInTheDocument();
   });
 
   it("updates inspector panel when selecting a sector pin", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Pin Gulmarg - Affarwat" }));
-    expect(screen.getByRole("heading", { name: "Gulmarg - Affarwat" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Pin Gulmarg — Affarwat Ridge" }));
+    expect(screen.getByRole("heading", { name: "Gulmarg — Affarwat Ridge" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /inspect sector/i })).toHaveAttribute(
       "href",
-      "/locations/JK-BM-12"
+      "/locations/JK-GUL-01"
     );
   });
 });
