@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../ui/Button";
 import { getSectorById, SECTOR_OPTIONS } from "../../data/observationDefaults";
 import { HAZARD_CONFIG, type HazardKind, VALIDATION_ERROR_CODES } from "../../types/observation";
+import { submitObservation, type ObservationContract } from "../../api/observations";
 
 const DEFAULT_SECTOR_ID = "JK-PN-04";
 const DEFAULT_HAZARD_KIND: HazardKind = "avalanche";
@@ -42,6 +43,7 @@ export function ObservationForm({
   const [error, setError] = useState<{ code: string; message: string; detail?: string } | null>(
     null
   );
+  const [submittedRecord, setSubmittedRecord] = useState<ObservationContract | null>(null);
 
   const sector = useMemo(() => getSectorById(sectorId), [sectorId]);
   const config = HAZARD_CONFIG[hazardKind];
@@ -91,7 +93,7 @@ export function ObservationForm({
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const trimmed = observationValue.trim();
@@ -127,23 +129,39 @@ export function ObservationForm({
     }
 
     setMode("submitting");
-    const result = {
-      sectorId: sector?.id ?? sectorId,
-      sectorName: sector?.name ?? "Unknown Sector",
-      hazardKind,
-      value: num,
-      unit: config.unit,
-      notes,
-    };
 
-    if (onSubmit) {
-      onSubmit(result);
-    }
+    try {
+      const record = await submitObservation({
+        sector_id: sector?.id ?? sectorId,
+        hazard_type: hazardKind,
+        value: num,
+        unit: config.unit,
+        notes: notes || undefined,
+      });
+      setSubmittedRecord(record);
 
-    // Simulate backend persistence delay for the demo.
-    setTimeout(() => {
+      if (onSubmit) {
+        onSubmit({
+          sectorId: sector?.id ?? sectorId,
+          sectorName: sector?.name ?? "Unknown Sector",
+          hazardKind,
+          value: num,
+          unit: config.unit,
+          notes,
+        });
+      }
+
       setMode("success");
-    }, 200);
+    } catch (err: unknown) {
+      const detail =
+        err instanceof Error ? err.message : "Failed to submit observation. Please try again.";
+      setError({
+        code: "SUBMIT_ERROR",
+        message: "Submission failed",
+        detail,
+      });
+      setMode("editing");
+    }
   };
 
   const handleCancel = () => {
@@ -198,9 +216,15 @@ export function ObservationForm({
           </div>
         </div>
 
-        <div className="w-full p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 dark:text-amber-200 text-left mb-2">
-          <span className="font-semibold">Backend Notice:</span> The backend currently lacks <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">POST /observations</code>. This observation has been captured locally and not persisted to remote database.
-        </div>
+        {submittedRecord && (
+          <div className="w-full p-2.5 rounded-lg bg-alert-green/10 border border-alert-green/20 text-[11px] text-green-900 dark:text-green-200 text-left mb-2">
+            <span className="font-semibold">Persisted:</span> Observation{" "}
+            <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-alert-green/20">
+              {submittedRecord.observation_id}
+            </code>{" "}
+            saved to database at {new Date(submittedRecord.observed_at).toUTCString()}.
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="primary" onClick={handleReset} className="flex-1 sm:w-auto">
@@ -216,19 +240,6 @@ export function ObservationForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
-      {/* Backend Integration Notice */}
-      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-        <span className="material-symbols-outlined text-[18px] text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
-          info
-        </span>
-        <div className="flex flex-col gap-0.5">
-          <span className="font-bold">Missing Backend Endpoint: POST /observations</span>
-          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
-            The backend API currently implements only <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">GET /observations</code> (read-only). A dedicated <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">POST /observations</code> submission route is not yet available on the server. Observations submitted here are captured in local session memory.
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label

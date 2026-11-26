@@ -67,7 +67,18 @@ def create_app() -> FastAPI:
             details=details,
         )
         data = envelope.model_dump(mode="json")
-        data["detail"] = exc.errors()
+        # Serialise error list safely: strip non-JSON-serialisable ctx values.
+        safe_errors = []
+        for err in exc.errors():
+            safe_err = {k: v for k, v in err.items() if k != "ctx"}
+            ctx = err.get("ctx")
+            if ctx:
+                safe_err["ctx"] = {
+                    k: str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+                    for k, v in ctx.items()
+                }
+            safe_errors.append(safe_err)
+        data["detail"] = safe_errors
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=data,

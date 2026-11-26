@@ -3,10 +3,10 @@
 from collections.abc import Generator
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import require_any_authenticated
+from app.auth import require_any_authenticated, require_operator
 from app.db.session import get_db
 from app.models.location import LocationModel  # noqa: F401
 from app.models.observation import ObservationModel  # noqa: F401
@@ -14,10 +14,16 @@ from app.models.source import SourceModel  # noqa: F401
 from app.repositories.observation_repository import ObservationRepository
 from app.schemas.common import PaginationMeta
 from app.schemas.observation import (
+    ObservationContract,
+    ObservationCreate,
     ObservationListResponse,
     ObservationMetric,
 )
-from app.services.observation_service import ObservationService
+from app.services.observation_service import (
+    IncompatibleHazardError,
+    LocationNotFoundError,
+    ObservationService,
+)
 
 router = APIRouter(prefix="/observations", tags=["observations"])
 
@@ -28,6 +34,27 @@ def _get_db() -> Generator[Session, None, None]:
 
 def get_observation_service(db: Session = Depends(_get_db)) -> ObservationService:
     return ObservationService(ObservationRepository(db))
+
+
+@router.post("", response_model=ObservationContract, status_code=status.HTTP_201_CREATED)
+def create_observation(
+    payload: ObservationCreate,
+    _user: object = Depends(require_operator),
+    service: ObservationService = Depends(get_observation_service),
+) -> ObservationContract:
+    """Submit a field or telemetry observation. Requires operator or admin role."""
+    try:
+        return service.create_observation(payload)
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location not found: {exc}",
+        ) from exc
+    except IncompatibleHazardError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("", response_model=ObservationListResponse)
@@ -69,3 +96,4 @@ def list_observations(
             has_next=has_next,
         ),
     )
+

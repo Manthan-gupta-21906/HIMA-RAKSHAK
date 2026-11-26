@@ -81,3 +81,19 @@ class ObservationRepository:
         return int(
             self._db.scalar(select(func.count()).select_from(ObservationModel)) or 0
         )
+
+    def save(self, model: ObservationModel) -> ObservationModel:
+        """Persist a new observation model and flush to get the DB-generated state."""
+        self._db.add(model)
+        self._db.flush()
+        return model
+
+    def get_by_idempotency_key(self, key: str) -> ObservationModel | None:
+        """Return an existing observation with the given idempotency key, or None."""
+        return self._db.scalar(
+            select(ObservationModel).where(ObservationModel.idempotency_key == key)
+        )
+
+    def get_by_id(self, observation_id: str) -> ObservationModel | None:
+        """Return an observation by its primary key, or None."""
+        return self._db.get(ObservationModel, observation_id)

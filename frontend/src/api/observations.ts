@@ -43,8 +43,10 @@ export async function fetchObservations(params: ListObservationsParams): Promise
 }
 
 export interface ObservationSubmissionPayload {
+  /** Backend accepts both location_id and sector_id via AliasChoices */
   sector_id: string;
   hazard_type: string;
+  metric?: string;
   value: number;
   unit: string;
   notes?: string;
@@ -52,11 +54,13 @@ export interface ObservationSubmissionPayload {
 }
 
 /**
- * Attempts to submit an observation to backend endpoint POST /observations.
- * NOTE: As identified during audit, backend currently has no POST /observations endpoint.
- * This function will make the real call and throw ApiError (404/405/etc.) if missing on backend.
+ * Submit a field observation to POST /observations.
+ * Requires an operator or admin Bearer token (set by AuthContext).
+ * Returns the persisted ObservationContract on success.
  */
-export async function submitObservation(payload: ObservationSubmissionPayload): Promise<ObservationContract> {
+export async function submitObservation(
+  payload: ObservationSubmissionPayload,
+): Promise<ObservationContract> {
   return apiClient<ObservationContract>("/observations", {
     method: "POST",
     body: JSON.stringify(payload),

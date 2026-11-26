@@ -1,7 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
+
+// Mock the observations API so form submission succeeds without a live backend.
+vi.mock("../../api/observations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/observations")>();
+  return {
+    ...actual,
+    submitObservation: vi.fn().mockResolvedValue({
+      observation_id: "obs-test-mock",
+      location_id: "JK-BM-12",
+      source_id: "src-field-obs",
+      observed_at: new Date().toISOString(),
+      metric: "snow_depth_cm",
+      value: 48.0,
+      unit: "cm",
+      is_demo_fixture: false,
+    }),
+  };
+});
 
 const SEEDED_USER = {
   id: "usr-ddma-01",
