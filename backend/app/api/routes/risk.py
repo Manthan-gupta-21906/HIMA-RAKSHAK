@@ -154,7 +154,7 @@ def evaluate_location_risk(
     response_model=RiskEvaluationResponse,
     summary="Assess hazard risk, exposure, priority, and alerts from observations",
 )
-def assess_location_risk(
+def post_assess_location_risk(
     location_id: str,
     trigger_alert: bool = Query(
         default=True,
