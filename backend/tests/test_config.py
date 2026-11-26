@@ -1,4 +1,4 @@
-"""Tests for runtime configuration and JWT secret validation."""
+"""Tests for runtime configuration and environment-only secret validation."""
 
 import pytest
 from pydantic import ValidationError
@@ -6,23 +6,39 @@ from pydantic import ValidationError
 from app.config import Settings
 
 
-def test_settings_allows_default_secret_in_development_and_test() -> None:
-    dev = Settings(app_env="development", _env_file=None)
-    test = Settings(app_env="test", _env_file=None)
-    assert dev.jwt_secret_key == "change-me-in-local-env"
-    assert test.jwt_secret_key == "change-me-in-local-env"
+@pytest.mark.parametrize("env_name", ["development", "test", "production"])
+def test_settings_requires_jwt_secret_from_env(
+    env_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
+        Settings(app_env=env_name, _env_file=None)
 
 
 @pytest.mark.parametrize(
     "bad_secret",
-    ["", "change-me-in-local-env", "short-secret-under-32-chars"],
+    ["", "   ", "change-me-in-local-env", "change_me_local_only"],
 )
-def test_settings_rejects_weak_or_default_secret_in_production(bad_secret: str) -> None:
+@pytest.mark.parametrize("env_name", ["development", "test", "production"])
+def test_settings_rejects_placeholder_or_empty_secret(
+    env_name: str, bad_secret: str
+) -> None:
     with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
-        Settings(app_env="production", jwt_secret_key=bad_secret, _env_file=None)
+        Settings(app_env=env_name, jwt_secret_key=bad_secret, _env_file=None)
 
 
-def test_settings_accepts_strong_secret_in_production() -> None:
+def test_settings_rejects_short_secret_in_production() -> None:
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
+        Settings(
+            app_env="production",
+            jwt_secret_key="short-secret-under-32-chars",
+            _env_file=None,
+        )
+
+
+def test_settings_accepts_env_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     strong = "a" * 32
-    prod = Settings(app_env="production", jwt_secret_key=strong, _env_file=None)
-    assert prod.jwt_secret_key == strong
+    monkeypatch.setenv("JWT_SECRET_KEY", strong)
+    for env_name in ("development", "test", "production"):
+        cfg = Settings(app_env=env_name, _env_file=None)
+        assert cfg.jwt_secret_key == strong

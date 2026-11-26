@@ -5,12 +5,15 @@ import { mapLocationAndRiskToSector } from "../api/mappers";
 import { fetchLocationRiskState } from "../api/risk";
 import { HazardMap } from "../components/map/HazardMap";
 import { Badge } from "../components/ui/Badge";
+import { useAuth } from "../context/AuthContext";
 import { MOCK_SECTORS, type HazardPathway, type MonitoringSector } from "../data/mockSectors";
 
 type HazardFilter = "all" | HazardPathway;
 
 /** Interactive multi-hazard map screen connected to backend location & risk APIs. */
 export function MapPage() {
+  const { user } = useAuth();
+  const canLogObservations = user?.role === "admin" || user?.role === "district_operator";
   const [sectors, setSectors] = useState<MonitoringSector[]>(MOCK_SECTORS);
   const [hazardFilter, setHazardFilter] = useState<HazardFilter>("all");
   const [staleOnly, setStaleOnly] = useState(false);
@@ -203,12 +206,14 @@ export function MapPage() {
                   <span>Inspect Sector</span>
                   <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
                 </Link>
-                <Link
-                  to={`/field-log?sector=${activeSector.id}&hazard=${activeSector.hazard}`}
-                  className="inline-flex items-center justify-center h-9 px-3 rounded-full bg-surface-container hover:bg-surface-container-high text-text-primary text-xs font-semibold"
-                >
-                  Field Log
-                </Link>
+                {canLogObservations ? (
+                  <Link
+                    to={`/field-log?sector=${activeSector.id}&hazard=${activeSector.hazard}`}
+                    className="inline-flex items-center justify-center h-9 px-3 rounded-full bg-surface-container hover:bg-surface-container-high text-text-primary text-xs font-semibold"
+                  >
+                    Field Log
+                  </Link>
+                ) : null}
               </div>
             </div>
           ) : (

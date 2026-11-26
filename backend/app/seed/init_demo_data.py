@@ -10,46 +10,18 @@ Seeds:
 
 import logging
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
+from app.api.routes.auth import seed_demo_users
 from app.db.session import create_db_engine, get_session_factory
 from app.ingestion.warning_import import import_sample_fixtures
 from app.models.location import LocationModel
 from app.models.observation import ObservationModel
 from app.models.source import SourceModel
-from app.models.user import UserModel, UserRole
 from app.seed.locations import PILOT_LOCATIONS
 
 logger = logging.getLogger(__name__)
-
-
-def seed_demo_users(db: Session) -> int:
-    """Ensure standard demo users exist for testing and demo flows."""
-    demo_users = [
-        ("admin", "admin1234", "Demo Admin", UserRole.ADMIN),
-        ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
-        ("viewer", "viewer1234", "Demo Viewer", UserRole.VIEWER),
-    ]
-    inserted = 0
-    for username, password, full_name, role in demo_users:
-        user = db.query(UserModel).filter(UserModel.username == username).first()
-        if user is None:
-            db.add(
-                UserModel(
-                    user_id=str(uuid4()),
-                    username=username,
-                    hashed_password=hash_password(password),
-                    full_name=full_name,
-                    role=role,
-                    is_demo_fixture=True,
-                )
-            )
-            inserted += 1
-    db.flush()
-    return inserted
 
 
 def seed_pilot_locations(db: Session) -> int:

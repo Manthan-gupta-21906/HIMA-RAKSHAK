@@ -26,12 +26,13 @@ const SEEDED_USER = {
   name: "M. Gupta",
   email: "ops.srinagar@jk-ddma.gov.in",
   initials: "MG",
-  role: "operator",
+  role: "district_operator",
   station: "DDMA Control Room",
   district: "Srinagar",
 };
 
 function seedSession(path: string) {
+  localStorage.setItem("hima_rakshak_token", "test-jwt-token");
   localStorage.setItem("hima_rakshak_auth_user", JSON.stringify(SEEDED_USER));
   window.history.pushState({}, "", path);
 }

@@ -5,6 +5,7 @@ import { fetchLocationRiskState, type LocationRiskState } from "../api/risk";
 import { HazardEngineCard } from "../components/location/HazardEngineCard";
 import { LocationKpiCard } from "../components/location/LocationKpiCard";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
+import { useAuth } from "../context/AuthContext";
 import { getLocationDetail } from "../data/locationDetails";
 import { MOCK_SECTORS } from "../data/mockSectors";
 
@@ -44,6 +45,8 @@ const FACILITY_ICONS: Record<string, string> = {
 /** Location detail view with separate flood and avalanche engines plus exposure. */
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const canLogObservations = user?.role === "admin" || user?.role === "district_operator";
   const sector = MOCK_SECTORS.find((item) => item.id === id);
   const detail = id ? getLocationDetail(id) : null;
   const [liveLocation, setLiveLocation] = useState<LocationOut | null>(null);
@@ -160,11 +163,19 @@ export function LocationDetailPage() {
 
           <HazardEngineCard
             engine={detail.avalanche}
-            fieldLogHref={`/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=avalanche`}
+            fieldLogHref={
+              canLogObservations
+                ? `/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=avalanche`
+                : undefined
+            }
           />
           <HazardEngineCard
             engine={detail.flood}
-            fieldLogHref={`/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=flood`}
+            fieldLogHref={
+              canLogObservations
+                ? `/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=flood`
+                : undefined
+            }
           />
         </section>
 

@@ -1,4 +1,4 @@
-export type UserRole = "operator" | "field_officer" | "viewer";
+export type UserRole = "admin" | "district_operator" | "viewer";
 
 export interface AuthUser {
   id: string;
@@ -13,5 +13,4 @@ export interface AuthUser {
 export interface LoginCredentials {
   email: string;
   password: string;
-  role: UserRole;
 }
