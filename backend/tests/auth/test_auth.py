@@ -59,7 +59,7 @@ def test_password_hash_not_reversible() -> None:
 def test_valid_login_returns_token() -> None:
     response = client.post(
         "/auth/login",
-        json={"username": "admin", "password": "admin1234"},
+        json={"username": "Admin", "password": "Admin123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -70,7 +70,7 @@ def test_valid_login_returns_token() -> None:
 def test_bad_credentials_rejected() -> None:
     response = client.post(
         "/auth/login",
-        json={"username": "admin", "password": "wrongpassword"},
+        json={"username": "Admin", "password": "wrongpassword"},
     )
     assert response.status_code == 401
     assert "Invalid" in response.json()["detail"]
@@ -82,7 +82,7 @@ def test_missing_token_gets_401() -> None:
 
 
 def test_expired_token_gets_401() -> None:
-    token = create_access_token("admin", "admin", expires_delta=timedelta(seconds=-1))
+    token = create_access_token("Admin", "admin", expires_delta=timedelta(seconds=-1))
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 
@@ -90,12 +90,12 @@ def test_expired_token_gets_401() -> None:
 def test_valid_token_returns_current_user() -> None:
     login_resp = client.post(
         "/auth/login",
-        json={"username": "admin", "password": "admin1234"},
+        json={"username": "Admin", "password": "Admin123"},
     )
     token = login_resp.json()["access_token"]
     me_resp = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me_resp.status_code == 200
-    assert me_resp.json()["username"] == "admin"
+    assert me_resp.json()["username"] == "Admin"
     assert me_resp.json()["role"] == "admin"
 
 
@@ -159,7 +159,7 @@ def test_production_never_seeds_demo_users_on_login(tmp_path: Path, monkeypatch:
     finally:
         db.close()
 
-    resp = client.post("/auth/login", json={"username": "admin", "password": "admin1234"})
+    resp = client.post("/auth/login", json={"username": "Admin", "password": "Admin123"})
     assert resp.status_code == 401
 
     db_check = prod_factory()
