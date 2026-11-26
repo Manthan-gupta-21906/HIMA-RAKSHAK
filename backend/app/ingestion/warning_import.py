@@ -21,12 +21,12 @@ SAMPLE_WARNING_FIXTURES: list[dict] = [
       "headline": "Flash Flood Watch — Poonch & Surankote Tributaries",
       "geographic_scope": "Poonch - Surankote",
       "summary": (
-          "Rapid rise observed on Surankote nallah and Poonch river gauge (17.80 ft vs 18.0 ft alert mark) "
-          "following 68 mm rainfall in 6 hours."
+          "Rapid rise observed on Surankote nallah and Poonch river gauge "
+          "(17.80 ft vs 18.0 ft alert mark) following 68 mm rainfall in 6 hours."
       ),
       "advisory_notes": (
-          "Authoritative CWC hydrological bulletin. Maintain continuous gauge watch along low-lying Surankote bridges "
-          "and approach roads."
+          "Authoritative CWC hydrological bulletin. Maintain continuous gauge watch along "
+          "low-lying Surankote bridges and approach roads."
       ),
       "source_url": "https://cwc.gov.in/bulletins/north/2026-104",
       "source_reference": "CWC Northern Rivers Bulletin (Sample Cached Record)",
@@ -44,11 +44,12 @@ SAMPLE_WARNING_FIXTURES: list[dict] = [
       "headline": "Stage-3 Avalanche Warning — Gulmarg & Affarwat Ridge",
       "geographic_scope": "Gulmarg - Affarwat Ridge",
       "summary": (
-          "Medium-sized natural and triggered avalanches likely on steep slopes above 3,000 m following "
-          "45 cm fresh snowfall and 60 km/h NW winds."
+          "Medium-sized natural and triggered avalanches likely on steep slopes "
+          "above 3,000 m following 45 cm fresh snowfall and 60 km/h NW winds."
       ),
       "advisory_notes": (
-          "Authoritative DGRE avalanche bulletin. Restrict movement on wind-loaded slopes >35 degrees."
+          "Authoritative DGRE avalanche bulletin. Restrict movement on "
+          "wind-loaded slopes >35 degrees."
       ),
       "source_url": "https://dgre.drdo.gov.in/avalanche/2026-038",
       "source_reference": "DGRE Chandigarh Avalanche Bulletin (Sample Cached Record)",
@@ -66,9 +67,13 @@ SAMPLE_WARNING_FIXTURES: list[dict] = [
       "headline": "Heavy Precipitation & Catchment Runoff Advisory",
       "geographic_scope": "Kupwara & Bandipora Higher Catchments",
       "summary": (
-          "Active Western Disturbance bringing heavy rainfall in river headwaters. Potential for rapid localized inundation."
+          "Active Western Disturbance bringing heavy rainfall in river headwaters. "
+          "Potential for rapid localized inundation."
       ),
-      "advisory_notes": "Authoritative IMD Meteorological Centre Srinagar bulletin. Monitor river tributaries.",
+      "advisory_notes": (
+          "Authoritative IMD Meteorological Centre Srinagar bulletin. "
+          "Monitor river tributaries."
+      ),
       "source_url": "https://mausam.imd.gov.in/srinagar/warnings/219",
       "source_reference": "IMD MC Srinagar Nowcast/Bulletin (Sample Cached Record)",
       "issued_at": NOW - timedelta(hours=10),

@@ -116,7 +116,11 @@ class OfficialWarningRepository:
         total = self.db.scalar(count_stmt) or 0
 
         offset = max(0, (page - 1) * page_size)
-        query = query.order_by(OfficialWarningModel.issued_at.desc()).offset(offset).limit(page_size)
+        query = (
+            query.order_by(OfficialWarningModel.issued_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
         items = list(self.db.scalars(query).all())
 
         return items, total

@@ -44,5 +44,7 @@ class OfficialWarningModel(Base):
     def is_expired(self) -> bool:
         """Return True if the warning validity window has passed."""
         now = datetime.now(UTC)
-        valid = self.valid_until if self.valid_until.tzinfo else self.valid_until.replace(tzinfo=UTC)
+        valid = (
+            self.valid_until if self.valid_until.tzinfo else self.valid_until.replace(tzinfo=UTC)
+        )
         return now >= valid
