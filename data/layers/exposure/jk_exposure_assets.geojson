@@ -1,0 +1,184 @@
+{
+  "type": "FeatureCollection",
+  "name": "jk_exposure_assets",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.7973, 34.0837] },
+      "properties": {
+        "asset_id": "asset-sgr-settlement-1",
+        "asset_type": "settlement",
+        "name": "Dal Lake & Jhelum Bund Ward",
+        "count": 3,
+        "count_type": "estimated",
+        "population_affected": 18500,
+        "is_critical": false,
+        "hazards": ["flood"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.801, 34.085] },
+      "properties": {
+        "asset_id": "asset-sgr-homes-1",
+        "asset_type": "home",
+        "name": "Jhelum Floodplain Residences",
+        "count": 3400,
+        "count_type": "estimated",
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["flood"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.795, 34.081] },
+      "properties": {
+        "asset_id": "asset-sgr-road-1",
+        "asset_type": "road",
+        "name": "Jhelum Bund & Residency Road",
+        "count": 1,
+        "count_type": "estimated",
+        "length_km": 14.5,
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["flood"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.799, 34.086] },
+      "properties": {
+        "asset_id": "asset-sgr-crit-1",
+        "asset_type": "critical_facility",
+        "name": "SMHS District Hospital & Substations",
+        "count": 3,
+        "count_type": "verified",
+        "population_affected": 0,
+        "is_critical": true,
+        "hazards": ["flood"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.3805, 34.0484] },
+      "properties": {
+        "asset_id": "asset-gul-settlement-1",
+        "asset_type": "settlement",
+        "name": "Gulmarg Gondola & Affarwat Sector",
+        "count": 2,
+        "count_type": "estimated",
+        "population_affected": 3800,
+        "is_critical": false,
+        "hazards": ["avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.382, 34.049] },
+      "properties": {
+        "asset_id": "asset-gul-homes-1",
+        "asset_type": "home",
+        "name": "Gulmarg Ridge Lodges & Quarters",
+        "count": 620,
+        "count_type": "estimated",
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.384, 34.05] },
+      "properties": {
+        "asset_id": "asset-gul-road-1",
+        "asset_type": "road",
+        "name": "Tangmarg–Gulmarg Ghat Road",
+        "count": 1,
+        "count_type": "estimated",
+        "length_km": 12.0,
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [74.379, 34.047] },
+      "properties": {
+        "asset_id": "asset-gul-crit-1",
+        "asset_type": "critical_facility",
+        "name": "Gulmarg PHC & Helipad",
+        "count": 2,
+        "count_type": "verified",
+        "population_affected": 0,
+        "is_critical": true,
+        "hazards": ["avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [75.1947, 33.4375] },
+      "properties": {
+        "asset_id": "asset-ban-settlement-1",
+        "asset_type": "settlement",
+        "name": "Banihal — NH-44 Corridor",
+        "count": 2,
+        "count_type": "estimated",
+        "population_affected": 9400,
+        "is_critical": false,
+        "hazards": ["flood", "avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [75.196, 33.439] },
+      "properties": {
+        "asset_id": "asset-ban-road-1",
+        "asset_type": "road",
+        "name": "NH-44 Ramban–Banihal Stretch",
+        "count": 1,
+        "count_type": "verified",
+        "length_km": 18.0,
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["flood", "avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [75.193, 33.436] },
+      "properties": {
+        "asset_id": "asset-ban-crit-1",
+        "asset_type": "critical_facility",
+        "name": "Banihal CHC & Tunnel Control",
+        "count": 2,
+        "count_type": "verified",
+        "population_affected": 0,
+        "is_critical": true,
+        "hazards": ["flood", "avalanche"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [75.7525, 34.4275] },
+      "properties": {
+        "asset_id": "asset-drs-road-1",
+        "asset_type": "road",
+        "name": "Zojila High Pass Approach",
+        "count": 1,
+        "count_type": "verified",
+        "length_km": 9.5,
+        "population_affected": 0,
+        "is_critical": false,
+        "hazards": ["avalanche"]
+      }
+    }
+  ]
+}

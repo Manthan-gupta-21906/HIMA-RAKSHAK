@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     demo_operator_password: str | None = None
     demo_viewer_username: str = "viewer"
     demo_viewer_password: str | None = None
+    alert_webhook_url: str | None = None
+    alert_webhook_timeout_seconds: float = 5.0
+    alert_smtp_host: str | None = None
+    alert_smtp_port: int = 587
+    alert_smtp_from: str | None = None
+    alert_email_recipients: str = ""
+    ingestion_scheduler_enabled: bool = False
+    ingestion_poll_interval_seconds: int = 60
+    ingestion_max_retries: int = 3
+    ingestion_retry_backoff_seconds: float = 2.0
 
     @property
     def cors_origin_list(self) -> list[str]:

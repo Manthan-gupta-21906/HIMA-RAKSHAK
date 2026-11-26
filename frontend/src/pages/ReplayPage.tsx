@@ -1,20 +1,85 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { fetchReplayEvents, type BackendHistoricalReplayEvent } from "../api/risk";
 import { Badge } from "../components/ui/Badge";
 import { MOCK_REPLAY_EVENTS } from "../data/mockReplayEvents";
-import type { PlaybackSpeed, ReplayViewMode } from "../types/replay";
+import type { HistoricalEvent, PlaybackSpeed, ReplayViewMode } from "../types/replay";
+
+function mapBackendReplayEvent(evt: BackendHistoricalReplayEvent): HistoricalEvent {
+  return {
+    id: evt.id,
+    locationId: evt.location_id,
+    title: evt.title,
+    sector: evt.sector,
+    hazard: evt.hazard,
+    dateRange: evt.date_range,
+    provenance: evt.provenance,
+    isPersisted: true,
+    isDemoFixture: evt.is_demo_fixture,
+    frames: evt.frames.map((f) => ({
+      id: f.id,
+      timestamp: new Date(f.timestamp).toLocaleString("en-IN", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      phaseLabel: f.phase_label,
+      primaryMetricLabel: f.primary_metric_label,
+      primaryMetricValue: f.primary_metric_value,
+      secondaryMetricLabel: f.secondary_metric_label,
+      secondaryMetricValue: f.secondary_metric_value,
+      alertTier: f.alert_tier,
+      summary: f.summary,
+    })),
+  };
+}
 
 /** Historical Event Replay and system loading/empty edge states matching Stitch system_states_loading_empty_event_replay. */
 export function ReplayPage() {
   const [viewMode, setViewMode] = useState<ReplayViewMode>("replay");
+  const [events, setEvents] = useState<HistoricalEvent[]>(MOCK_REPLAY_EVENTS);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historySourceNote, setHistorySourceNote] = useState<string>("Archival Sample");
   const [selectedEventId, setSelectedEventId] = useState(MOCK_REPLAY_EVENTS[0].id);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
 
-  const activeEvent =
-    MOCK_REPLAY_EVENTS.find((e) => e.id === selectedEventId) ?? MOCK_REPLAY_EVENTS[0];
+  const loadPersistedReplay = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetchReplayEvents({ limit: 50 });
+      const persisted = response.items
+        .filter((item) => item.frames.length > 0)
+        .map(mapBackendReplayEvent);
+      if (persisted.length > 0) {
+        const combined = [...persisted, ...MOCK_REPLAY_EVENTS];
+        setEvents(combined);
+        setSelectedEventId((prev) =>
+          combined.some((e) => e.id === prev) ? prev : persisted[0].id
+        );
+        setHistorySourceNote(`Persisted History (${persisted.length} sequences)`);
+      } else {
+        setEvents(MOCK_REPLAY_EVENTS);
+        setHistorySourceNote("Archival Sample (no persisted assessments yet)");
+      }
+    } catch {
+      setEvents(MOCK_REPLAY_EVENTS);
+      setHistorySourceNote("Archival Sample (offline fallback)");
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPersistedReplay();
+  }, [loadPersistedReplay]);
+
+  const activeEvent = events.find((e) => e.id === selectedEventId) ?? events[0];
   const frames = activeEvent.frames;
-  const safeIndex = Math.min(frameIndex, frames.length - 1);
+  const safeIndex = Math.min(frameIndex, Math.max(0, frames.length - 1));
   const activeFrame = frames[safeIndex];
 
   useEffect(() => {
@@ -149,17 +214,33 @@ export function ReplayPage() {
           <section className="bg-surface-card border border-border-hairline rounded-xl p-5 flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex flex-col gap-1 flex-1">
-                <label htmlFor="replay-event-select" className="text-xs font-semibold text-text-primary">
-                  Select Historical Event
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="replay-event-select" className="text-xs font-semibold text-text-primary">
+                    Select Historical Event
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium text-text-muted">
+                      {isLoadingHistory ? "Syncing persisted history..." : historySourceNote}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void loadPersistedReplay()}
+                      disabled={isLoadingHistory}
+                      className="text-[11px] font-semibold text-primary hover:underline disabled:opacity-50 cursor-pointer"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
                 <select
                   id="replay-event-select"
                   value={activeEvent.id}
                   onChange={(e) => handleEventChange(e.target.value)}
                   className="h-10 px-3 rounded-lg bg-surface-container-lowest border border-border-hairline text-xs sm:text-sm font-medium text-text-primary"
                 >
-                  {MOCK_REPLAY_EVENTS.map((evt) => (
+                  {events.map((evt) => (
                     <option key={evt.id} value={evt.id}>
+                      {evt.isPersisted ? "[DB] " : "[Sample] "}
                       {evt.title} ({evt.dateRange})
                     </option>
                   ))}

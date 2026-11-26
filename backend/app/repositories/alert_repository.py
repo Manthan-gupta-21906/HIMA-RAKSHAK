@@ -1,12 +1,18 @@
-"""Repository for persisting system-generated alerts and action history."""
+"""Repository for persisting system-generated alerts, deliveries, and action history."""
 
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.alert import AlertActionModel
-from app.schemas.alert import AlertActionRecord, AlertStatus
+from app.models.alert import AlertActionModel, AlertDeliveryModel
+from app.schemas.alert import (
+    AlertActionRecord,
+    AlertDeliveryRecord,
+    AlertStatus,
+    DeliveryChannel,
+    DeliveryStatus,
+)
 from app.schemas.common import HazardType
 
 
@@ -23,7 +29,22 @@ class AlertRepository:
         return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
     @classmethod
-    def _to_contract(cls, row: AlertActionModel) -> AlertActionRecord:
+    def _delivery_to_contract(cls, row: AlertDeliveryModel) -> AlertDeliveryRecord:
+        return AlertDeliveryRecord(
+            delivery_id=row.delivery_id,
+            alert_id=row.alert_id,
+            channel=DeliveryChannel(row.channel),
+            target=row.target,
+            status=DeliveryStatus(row.status),
+            attempts=row.attempts,
+            response_code=row.response_code,
+            last_error=row.last_error,
+            dispatched_at=cls._ensure_utc(row.dispatched_at),
+            created_at=cls._ensure_utc(row.created_at) or datetime.now(UTC),
+        )
+
+    def _to_contract(self, row: AlertActionModel) -> AlertActionRecord:
+        deliveries = self.list_deliveries(row.alert_id)
         return AlertActionRecord(
             alert_id=row.alert_id,
             location_id=row.location_id,
@@ -35,12 +56,14 @@ class AlertRepository:
             recommendation=row.recommendation,
             explanation=list(row.explanation or []),
             status=AlertStatus(row.status),
+            delivery_status=DeliveryStatus(row.delivery_status),
+            deliveries=deliveries,
             acknowledged_by=row.acknowledged_by,
-            acknowledged_at=cls._ensure_utc(row.acknowledged_at),
+            acknowledged_at=self._ensure_utc(row.acknowledged_at),
             action_note=row.action_note,
-            action_updated_at=cls._ensure_utc(row.action_updated_at),
+            action_updated_at=self._ensure_utc(row.action_updated_at),
             is_official_warning=bool(row.is_official_warning),
-            created_at=cls._ensure_utc(row.created_at) or datetime.now(UTC),
+            created_at=self._ensure_utc(row.created_at) or datetime.now(UTC),
         )
 
     def create(self, record: AlertActionRecord) -> AlertActionRecord:
@@ -56,6 +79,7 @@ class AlertRepository:
             recommendation=record.recommendation,
             explanation=list(record.explanation),
             status=record.status.value,
+            delivery_status=record.delivery_status.value,
             acknowledged_by=record.acknowledged_by,
             acknowledged_at=record.acknowledged_at,
             action_note=record.action_note,
@@ -115,3 +139,43 @@ class AlertRepository:
         self._db.commit()
         self._db.refresh(row)
         return self._to_contract(row)
+
+    def record_deliveries(
+        self,
+        alert_id: str,
+        deliveries: list[AlertDeliveryRecord],
+        overall_status: DeliveryStatus,
+    ) -> AlertActionRecord | None:
+        """Persist delivery attempts and update the alert's overall delivery_status."""
+        row = self._db.get(AlertActionModel, alert_id)
+        if row is None:
+            return None
+        for d in deliveries:
+            self._db.add(
+                AlertDeliveryModel(
+                    delivery_id=d.delivery_id,
+                    alert_id=d.alert_id,
+                    channel=d.channel.value,
+                    target=d.target,
+                    status=d.status.value,
+                    attempts=d.attempts,
+                    response_code=d.response_code,
+                    last_error=d.last_error,
+                    dispatched_at=d.dispatched_at,
+                    created_at=d.created_at,
+                )
+            )
+        row.delivery_status = overall_status.value
+        self._db.commit()
+        self._db.refresh(row)
+        return self._to_contract(row)
+
+    def list_deliveries(self, alert_id: str) -> list[AlertDeliveryRecord]:
+        """List delivery attempts for an alert ordered newest-first."""
+        stmt = (
+            select(AlertDeliveryModel)
+            .where(AlertDeliveryModel.alert_id == alert_id)
+            .order_by(AlertDeliveryModel.created_at.desc())
+        )
+        rows = self._db.scalars(stmt).all()
+        return [self._delivery_to_contract(r) for r in rows]

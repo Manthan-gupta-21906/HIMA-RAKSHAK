@@ -65,3 +65,41 @@ class RiskAssessmentRequest(BaseModel):
     """Optional parameters for triggering a multi-hazard risk assessment."""
 
     cutoff_at: AwareDatetime | None = None
+
+
+class ReplayFrameContract(BaseModel):
+    """Single chronological frame reconstructed from persisted risk and observation history."""
+
+    id: str
+    timestamp: AwareDatetime
+    phase_label: str
+    primary_metric_label: str
+    primary_metric_value: str
+    secondary_metric_label: str
+    secondary_metric_value: str
+    alert_tier: str
+    risk_class: RiskClass
+    score: float | None = None
+    confidence: float
+    summary: str
+
+
+class HistoricalReplayEvent(BaseModel):
+    """Persisted historical event sequence for a location and hazard pathway."""
+
+    id: str
+    location_id: str
+    title: str
+    sector: str
+    hazard: HazardType
+    date_range: str
+    provenance: str
+    is_demo_fixture: bool = False
+    frames: list[ReplayFrameContract]
+
+
+class ReplayEventsResponse(BaseModel):
+    """Response envelope for persisted historical replay events."""
+
+    total: int
+    items: list[HistoricalReplayEvent]
