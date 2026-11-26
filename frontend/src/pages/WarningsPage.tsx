@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
 import { MOCK_WARNINGS } from "../data/mockWarnings";
+import { WarningPanel } from "../features/warnings/WarningPanel";
 import type {
   OfficialWarning,
   WarningAgency,
@@ -186,65 +187,7 @@ export function WarningsPage() {
         </div>
 
         <aside className="lg:col-span-5">
-          {activeWarning ? (
-            <div className="bg-surface-card border border-border-hairline rounded-xl p-5 sm:p-6 flex flex-col gap-4 shadow-xs">
-              <div className="flex items-center justify-between gap-2 pb-3 border-b border-border-hairline">
-                <div className="flex items-center gap-2">
-                  <Badge tone={AGENCY_TONE[activeWarning.agency]} showDot>
-                    {activeWarning.agency}
-                  </Badge>
-                  <Badge tone={SEVERITY_TONE[activeWarning.severity]}>
-                    {activeWarning.severity} Alert
-                  </Badge>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                  Read-Only Record
-                </span>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-semibold text-text-muted">
-                  {activeWarning.agencyFullName} • {activeWarning.bulletinCode}
-                </p>
-                <h2 className="text-lg font-bold text-text-primary mt-1">{activeWarning.title}</h2>
-              </div>
-
-              <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                {activeWarning.summary}
-              </p>
-
-              <div className="p-3.5 rounded-lg bg-surface-container-low border border-border-hairline flex flex-col gap-1.5 text-xs">
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">Issued</span>
-                  <span className="font-semibold text-text-primary">{activeWarning.issuedAt}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">Valid Until</span>
-                  <span className="font-semibold text-text-primary">
-                    {activeWarning.validUntil}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">District</span>
-                  <span className="font-semibold text-text-primary">{activeWarning.district}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">Sectors</span>
-                  <span className="font-semibold text-text-primary text-right">
-                    {activeWarning.affectedSectors.join(", ")}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-surface-subtle/60 border border-border-hairline text-xs text-on-surface-variant">
-                <p className="font-bold text-text-primary mb-1">Official Advisory Note</p>
-                <p>{activeWarning.advisoryNotes}</p>
-                <p className="text-[11px] text-text-muted mt-2">
-                  Provenance: {activeWarning.sourceReference}
-                </p>
-              </div>
-            </div>
-          ) : null}
+          <WarningPanel warning={activeWarning || null} />
         </aside>
       </div>
     </div>
