@@ -132,8 +132,12 @@ def _admin_headers() -> dict[str, str]:
 class TestSourceAPI:
     """HTTP-level tests for the /sources endpoints."""
 
+    def test_list_sources_requires_auth(self) -> None:
+        assert client.get("/sources").status_code == status.HTTP_401_UNAUTHORIZED
+        assert client.get("/sources/imd-aws-demo").status_code == status.HTTP_401_UNAUTHORIZED
+
     def test_list_sources_empty(self) -> None:
-        resp = client.get("/sources")
+        resp = client.get("/sources", headers=_admin_headers())
         assert resp.status_code == status.HTTP_200_OK
         body = resp.json()
         assert body["total"] == 0
@@ -152,12 +156,12 @@ class TestSourceAPI:
         assert data["freshness"] == "unknown"  # never fetched
 
         # Retrieve by ID
-        resp2 = client.get("/sources/test-register-01")
+        resp2 = client.get("/sources/test-register-01", headers=headers)
         assert resp2.status_code == status.HTTP_200_OK
         assert resp2.json()["provider"] == payload["provider"]
 
     def test_unknown_source_returns_404(self) -> None:
-        resp = client.get("/sources/does-not-exist")
+        resp = client.get("/sources/does-not-exist", headers=_admin_headers())
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_register_requires_admin(self) -> None:
@@ -174,7 +178,7 @@ class TestSourceAPI:
             source_id="hydro-filter-01", source_type="hydrology"
         )
         client.post("/sources", json=payload, headers=headers)
-        resp = client.get("/sources", params={"source_type": "hydrology"})
+        resp = client.get("/sources", params={"source_type": "hydrology"}, headers=headers)
         assert resp.status_code == status.HTTP_200_OK
         ids = [s["source_id"] for s in resp.json()["items"]]
         assert "hydro-filter-01" in ids
@@ -185,7 +189,7 @@ class TestSourceAPI:
             source_id="cached-filter-01", access_mode="cached"
         )
         client.post("/sources", json=payload, headers=headers)
-        resp = client.get("/sources", params={"access_mode": "cached"})
+        resp = client.get("/sources", params={"access_mode": "cached"}, headers=headers)
         assert resp.status_code == status.HTTP_200_OK
         ids = [s["source_id"] for s in resp.json()["items"]]
         assert "cached-filter-01" in ids
@@ -196,7 +200,7 @@ class TestSourceAPI:
         reg_resp = client.post("/sources", json=payload, headers=headers)
         assert reg_resp.status_code == status.HTTP_201_CREATED
 
-        r1 = client.get("/sources/fetch-unique-test-01")
+        r1 = client.get("/sources/fetch-unique-test-01", headers=headers)
         assert r1.status_code == status.HTTP_200_OK
         assert r1.json()["freshness"] == "unknown"
 
@@ -219,7 +223,7 @@ class TestSourceAPI:
             is_demo_fixture=True,
         )
         client.post("/sources", json=payload, headers=headers)
-        resp = client.get("/sources/prov-round-01")
+        resp = client.get("/sources/prov-round-01", headers=headers)
         data = resp.json()
         assert data["licence"] == "CC-BY-4.0"
         assert data["reference_url"] == "https://example.org/data"

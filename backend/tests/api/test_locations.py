@@ -10,8 +10,18 @@ from app.seed.locations import PILOT_LOCATIONS, seed_locations
 client = TestClient(app)
 
 
+def _viewer_headers() -> dict[str, str]:
+    token = create_access_token("viewer_user", "viewer")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_list_locations_requires_authentication() -> None:
+    assert client.get("/locations").status_code == 401
+    assert client.get("/locations/JK-GUL-01").status_code == 401
+
+
 def test_list_locations_returns_seeded_demo_fixtures() -> None:
-    res = client.get("/locations")
+    res = client.get("/locations", headers=_viewer_headers())
     assert res.status_code == 200
     data = res.json()
     assert data["total"] >= len(PILOT_LOCATIONS)
@@ -21,7 +31,7 @@ def test_list_locations_returns_seeded_demo_fixtures() -> None:
 
 
 def test_list_locations_pagination() -> None:
-    res = client.get("/locations", params={"page": 1, "page_size": 2})
+    res = client.get("/locations", params={"page": 1, "page_size": 2}, headers=_viewer_headers())
     assert res.status_code == 200
     data = res.json()
     assert len(data["items"]) == 2
@@ -31,7 +41,11 @@ def test_list_locations_pagination() -> None:
 
 
 def test_search_locations_by_query_and_hazard() -> None:
-    res = client.get("/locations", params={"q": "Srinagar", "hazard_type": "flood"})
+    res = client.get(
+        "/locations",
+        params={"q": "Srinagar", "hazard_type": "flood"},
+        headers=_viewer_headers(),
+    )
     assert res.status_code == 200
     items = res.json()["items"]
     assert len(items) == 1
@@ -39,7 +53,11 @@ def test_search_locations_by_query_and_hazard() -> None:
 
 
 def test_unsupported_coverage_is_explicit() -> None:
-    res = client.get("/locations", params={"coverage_status": "unsupported"})
+    res = client.get(
+        "/locations",
+        params={"coverage_status": "unsupported"},
+        headers=_viewer_headers(),
+    )
     assert res.status_code == 200
     items = res.json()["items"]
     assert any(item["location_id"] == "JK-DRS-01" for item in items)
@@ -49,11 +67,11 @@ def test_unsupported_coverage_is_explicit() -> None:
 
 
 def test_get_location_detail_and_unknown_404() -> None:
-    ok = client.get("/locations/JK-GUL-01")
+    ok = client.get("/locations/JK-GUL-01", headers=_viewer_headers())
     assert ok.status_code == 200
     assert ok.json()["name"].startswith("Gulmarg")
 
-    missing = client.get("/locations/JK-UNKNOWN-99")
+    missing = client.get("/locations/JK-UNKNOWN-99", headers=_viewer_headers())
     assert missing.status_code == 404
     assert missing.json()["error_code"] == "HTTP_404"
 

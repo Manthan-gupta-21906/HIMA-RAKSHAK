@@ -29,3 +29,9 @@ cd backend
 ruff check .
 pytest
 ```
+
+## API Endpoint Policy
+- **Public (unauthenticated):** `GET /health`, `POST /auth/login`
+- **Authenticated (`viewer`, `district_operator`, `admin`):** `GET /auth/me`, `GET /locations*`, `GET /sources*`, `GET /observations`, `GET /risk/*`, `GET /warnings*`
+- **Operator / Admin (`district_operator`, `admin`):** `POST /warnings*`
+- **Admin only (`admin`):** `POST /locations`, `PATCH /locations/{location_id}/coverage`, `POST /sources*`

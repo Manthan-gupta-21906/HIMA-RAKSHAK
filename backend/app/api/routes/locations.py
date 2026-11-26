@@ -4,7 +4,7 @@ from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.auth import require_admin
+from app.auth import require_admin, require_any_authenticated
 from app.models.location import CoverageStatus, HazardType
 from app.repositories.location_repository import (
     LocationRepository,
@@ -37,6 +37,7 @@ def list_locations(
     ),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    _user: object = Depends(require_any_authenticated),
     service: LocationService = Depends(get_location_service),
 ) -> LocationListResponse:
     """List or search curated pilot locations with pagination."""
@@ -66,6 +67,7 @@ def list_locations(
 @router.get("/{location_id}", response_model=LocationOut)
 def get_location_detail(
     location_id: str,
+    _user: object = Depends(require_any_authenticated),
     service: LocationService = Depends(get_location_service),
 ) -> LocationOut:
     """Get details for a single pilot location."""
