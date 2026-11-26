@@ -1,4 +1,4 @@
-"""Risk assessment contracts including uncertainty, freshness, and readiness."""
+"""Risk assessment contracts including uncertainty, freshness, and multi-hazard spatial state."""
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -26,6 +26,7 @@ class RiskAssessmentContract(BaseModel):
     prediction_status: PredictionStatus
     readiness_reason: str | None = Field(default=None, max_length=300)
     assessed_at: AwareDatetime
+    model_version: str | None = Field(default=None, max_length=32)
     provenance: ProvenanceMeta
 
     @model_validator(mode="after")
@@ -38,3 +39,14 @@ class RiskAssessmentContract(BaseModel):
             if self.score is not None:
                 raise ValueError("score must be None when prediction_status is 'unsupported'.")
         return self
+
+
+class LocationRiskState(BaseModel):
+    """Co-located multi-hazard spatial state keeping hazard outputs distinct."""
+
+    location_id: str
+    updated_at: AwareDatetime
+    flood: RiskAssessmentContract | None = None
+    avalanche: RiskAssessmentContract | None = None
+    primary_hazard: HazardType | None = None
+    highest_risk_class: RiskClass = RiskClass.LOW
