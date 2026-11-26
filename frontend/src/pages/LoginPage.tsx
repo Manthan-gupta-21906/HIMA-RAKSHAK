@@ -15,14 +15,12 @@ const ROLE_OPTIONS: { value: UserRole; label: string; hint: string }[] = [
   { value: "viewer", label: "SDMA Viewer", hint: "Read-only advisory monitoring" },
 ];
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validateLogin(email: string, password: string): FormErrors {
+function validateLogin(username: string, password: string): FormErrors {
   const errors: FormErrors = {};
-  if (!email.trim()) {
-    errors.email = "Official email address is required.";
-  } else if (!EMAIL_PATTERN.test(email.trim())) {
-    errors.email = "Enter a valid email address (e.g. ops@jk-ddma.gov.in).";
+  if (!username.trim()) {
+    errors.email = "Username or official email is required.";
+  } else if (username.trim().length < 3) {
+    errors.email = "Enter a valid username or email address.";
   }
   if (!password) {
     errors.password = "Password is required.";
@@ -64,8 +62,8 @@ export function LoginPage() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail("ops.srinagar@jk-ddma.gov.in");
-    setPassword("HimaRakshak#2026");
+    setEmail("Admin");
+    setPassword("Admin123");
     setErrors({});
   };
 
@@ -106,15 +104,15 @@ export function LoginPage() {
             )}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-email" className="text-xs font-semibold text-text-primary">
-                Official Email
+                Username or Email
               </label>
               <input
                 id="login-email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ops.srinagar@jk-ddma.gov.in"
+                placeholder="Admin"
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? "login-email-error" : undefined}
                 className={`h-11 px-4 rounded-full bg-surface-container-lowest border text-sm text-text-primary focus:outline-none transition-all ${
