@@ -42,6 +42,7 @@ export function LoginPage() {
   const [role, setRole] = useState<UserRole>("operator");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -51,9 +52,12 @@ export function LoginPage() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
+    setApiError(null);
     try {
       await login({ email, password, role });
       navigate("/", { replace: true });
+    } catch (err) {
+      setApiError((err as Error).message || "Authentication failed. Check credentials.");
     } finally {
       setIsSubmitting(false);
     }
@@ -92,6 +96,14 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+            {apiError && (
+              <div
+                role="alert"
+                className="p-3 rounded-lg bg-danger-surface border border-danger-border text-danger-text text-xs font-medium"
+              >
+                {apiError}
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="login-email" className="text-xs font-semibold text-text-primary">
                 Official Email

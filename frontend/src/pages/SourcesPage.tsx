@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
+import { fetchSources } from "../api/sources";
+import { mapSourceOutToRecord } from "../api/mappers";
 import { MOCK_DATA_SOURCES } from "../data/mockDataSources";
-import type { SourceAgency, SourceStatus } from "../types/dataSource";
+import type { DataSourceRecord, SourceAgency, SourceStatus } from "../types/dataSource";
 
 type StatusFilter = "all" | SourceStatus;
 type AgencyFilter = "all" | SourceAgency;
@@ -21,41 +23,99 @@ const AGENCY_TONE: Record<SourceAgency, BadgeTone> = {
 
 /** Data source monitoring interface showing connection status, latency, and freshness. */
 export function SourcesPage() {
+  const [sources, setSources] = useState<DataSourceRecord[]>(MOCK_DATA_SOURCES);
+  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [agencyFilter, setAgencyFilter] = useState<AgencyFilter>("all");
   const [lastChecked, setLastChecked] = useState("Just now (Sample Registry)");
 
-  const counts = useMemo(() => {
-    return {
-      total: MOCK_DATA_SOURCES.length,
-      online: MOCK_DATA_SOURCES.filter((s) => s.status === "online").length,
-      delayed: MOCK_DATA_SOURCES.filter((s) => s.status === "delayed").length,
-      offline: MOCK_DATA_SOURCES.filter((s) => s.status === "offline").length,
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSources() {
+      try {
+        setLoading(true);
+        const res = await fetchSources();
+        if (isMounted && res.items && res.items.length > 0) {
+          setSources(res.items.map(mapSourceOutToRecord));
+          setIsLive(true);
+          setApiError(null);
+          setLastChecked("Connected to Live Backend Registry");
+        }
+      } catch (err) {
+        if (isMounted) {
+          // If backend is offline or returns an error, keep sample registry and set informative note
+          setApiError(
+            err instanceof Error
+              ? `Backend /sources API unavailable: ${err.message}. Showing sample cached registry.`
+              : "Backend /sources API unavailable."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSources();
+    return () => {
+      isMounted = false;
     };
   }, []);
 
+  const counts = useMemo(() => {
+    return {
+      total: sources.length,
+      online: sources.filter((s) => s.status === "online").length,
+      delayed: sources.filter((s) => s.status === "delayed").length,
+      offline: sources.filter((s) => s.status === "offline").length,
+    };
+  }, [sources]);
+
   const filteredSources = useMemo(() => {
-    return MOCK_DATA_SOURCES.filter((src) => {
+    return sources.filter((src) => {
       if (statusFilter !== "all" && src.status !== statusFilter) return false;
       if (agencyFilter !== "all" && src.agency !== agencyFilter) return false;
       return true;
     });
-  }, [statusFilter, agencyFilter]);
+  }, [sources, statusFilter, agencyFilter]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
-    setLastChecked(`Checked at ${hh}:${mm} (Sample Registry)`);
+    try {
+      setLoading(true);
+      const res = await fetchSources();
+      if (res.items && res.items.length > 0) {
+        setSources(res.items.map(mapSourceOutToRecord));
+        setIsLive(true);
+        setApiError(null);
+        setLastChecked(`Checked at ${hh}:${mm} (Live Backend Registry)`);
+      } else {
+        setLastChecked(`Checked at ${hh}:${mm} (Sample Registry)`);
+      }
+    } catch {
+      setLastChecked(`Checked at ${hh}:${mm} (Sample Registry)`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            Telemetry Provenance &amp; Freshness
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Telemetry Provenance &amp; Freshness
+            </span>
+            <Badge tone={isLive ? "clear" : "neutral"}>
+              {isLive ? "Live API Registry" : "Sample Registry"}
+            </Badge>
+          </div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
             Data Source Status
           </h1>
@@ -71,13 +131,26 @@ export function SourcesPage() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-text-primary transition-colors cursor-pointer"
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-text-primary transition-colors cursor-pointer disabled:opacity-60"
           >
-            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            <span className={`material-symbols-outlined text-[16px] ${loading ? "animate-spin" : ""}`}>
+              refresh
+            </span>
             <span>Refresh Status</span>
           </button>
         </div>
       </div>
+
+      {apiError && (
+        <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-amber-500">info</span>
+            <span>{apiError}</span>
+          </div>
+          <span className="text-[11px] font-medium text-text-muted">GET /sources</span>
+        </div>
+      )}
 
       <section aria-label="Source health summary" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-surface-card border border-border-hairline flex flex-col gap-1">
@@ -85,7 +158,9 @@ export function SourcesPage() {
             Registered Feeds
           </span>
           <span className="text-xl font-bold text-text-primary">{counts.total} Sources</span>
-          <span className="text-[11px] text-secondary">Sample cached registry</span>
+          <span className="text-[11px] text-secondary">
+            {isLive ? "Backend sources table" : "Sample cached registry"}
+          </span>
         </div>
         <div className="p-4 rounded-xl bg-surface-card border border-border-hairline flex flex-col gap-1">
           <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.08em]">
@@ -145,56 +220,62 @@ export function SourcesPage() {
         </select>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredSources.map((src) => {
-          const statusMeta = STATUS_BADGE[src.status];
-          return (
-            <article
-              key={src.id}
-              className="bg-surface-card border border-border-hairline rounded-xl p-5 flex flex-col justify-between gap-3 shadow-xs"
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Badge tone={AGENCY_TONE[src.agency]} showDot={src.agency !== "SDRF"}>
-                      {src.agency}
-                    </Badge>
-                    <span className="text-[11px] font-semibold text-text-muted">{src.id}</span>
+      {filteredSources.length === 0 ? (
+        <div className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center text-xs text-text-muted">
+          No data sources match the current filter criteria.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredSources.map((src) => {
+            const statusMeta = STATUS_BADGE[src.status];
+            return (
+              <article
+                key={src.id}
+                className="bg-surface-card border border-border-hairline rounded-xl p-5 flex flex-col justify-between gap-3 shadow-xs"
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge tone={AGENCY_TONE[src.agency]} showDot={src.agency !== "SDRF"}>
+                        {src.agency}
+                      </Badge>
+                      <span className="text-[11px] font-semibold text-text-muted">{src.id}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${statusMeta.dot}`} />
+                      <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${statusMeta.dot}`} />
-                    <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
-                  </div>
-                </div>
 
-                <h2 className="text-base font-bold text-text-primary">{src.name}</h2>
-                <p className="text-xs text-secondary">
-                  {src.category} • Coverage: {src.coverage}
-                </p>
-              </div>
-
-              <div className="pt-3 border-t border-border-hairline flex flex-col gap-1.5 text-xs">
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">Last Updated</span>
-                  <span className="font-semibold text-text-primary">{src.lastUpdated}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-muted">Latency / Cadence</span>
-                  <span className="font-medium text-on-surface-variant">
-                    {src.latencyLabel} ({src.cadence})
-                  </span>
-                </div>
-                <p className="text-[11px] text-text-muted pt-1">{src.provenanceNote}</p>
-                {src.knownLimitation ? (
-                  <p className="text-[11px] text-agency-dgre font-medium bg-amber-50/70 dark:bg-amber-950/40 border border-border-hairline rounded-lg px-2.5 py-1.5 mt-1">
-                    Limitation: {src.knownLimitation}
+                  <h2 className="text-base font-bold text-text-primary">{src.name}</h2>
+                  <p className="text-xs text-secondary">
+                    {src.category} • Coverage: {src.coverage}
                   </p>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+                </div>
+
+                <div className="pt-3 border-t border-border-hairline flex flex-col gap-1.5 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-text-muted">Last Updated</span>
+                    <span className="font-semibold text-text-primary">{src.lastUpdated}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-text-muted">Latency / Cadence</span>
+                    <span className="font-medium text-on-surface-variant">
+                      {src.latencyLabel} ({src.cadence})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-muted pt-1">{src.provenanceNote}</p>
+                  {src.knownLimitation ? (
+                    <p className="text-[11px] text-agency-dgre font-medium bg-amber-50/70 dark:bg-amber-950/40 border border-border-hairline rounded-lg px-2.5 py-1.5 mt-1">
+                      Limitation: {src.knownLimitation}
+                    </p>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

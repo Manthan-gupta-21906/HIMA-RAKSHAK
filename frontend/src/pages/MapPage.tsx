@@ -1,24 +1,76 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchLocations } from "../api/locations";
+import { mapLocationAndRiskToSector } from "../api/mappers";
+import { fetchLocationRiskState } from "../api/risk";
 import { HazardMap } from "../components/map/HazardMap";
 import { Badge } from "../components/ui/Badge";
 import { MOCK_SECTORS, type HazardPathway, type MonitoringSector } from "../data/mockSectors";
 
 type HazardFilter = "all" | HazardPathway;
 
-/** Interactive multi-hazard map screen with pathway filters and sector inspector panel. */
+/** Interactive multi-hazard map screen connected to backend location & risk APIs. */
 export function MapPage() {
+  const [sectors, setSectors] = useState<MonitoringSector[]>(MOCK_SECTORS);
   const [hazardFilter, setHazardFilter] = useState<HazardFilter>("all");
   const [staleOnly, setStaleOnly] = useState(false);
   const [selectedSector, setSelectedSector] = useState<MonitoringSector>(MOCK_SECTORS[0]);
+  const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadMapData() {
+      try {
+        const locResponse = await fetchLocations();
+        if (!isMounted) return;
+
+        if (locResponse && Array.isArray(locResponse.items) && locResponse.items.length > 0) {
+          // Filter locations with valid coordinates
+          const validLocs = locResponse.items.filter(
+            (loc) => typeof loc.latitude === "number" && typeof loc.longitude === "number"
+          );
+
+          const liveSectors = await Promise.all(
+            validLocs.map(async (loc) => {
+              try {
+                const riskState = await fetchLocationRiskState(loc.location_id);
+                return mapLocationAndRiskToSector(loc, riskState);
+              } catch {
+                return mapLocationAndRiskToSector(loc, null);
+              }
+            })
+          );
+
+          if (isMounted) {
+            setSectors(liveSectors);
+            setIsLive(true);
+            if (liveSectors.length > 0) {
+              setSelectedSector(liveSectors[0]);
+            }
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError((err as Error).message || "Could not load backend map locations");
+        }
+      }
+    }
+
+    loadMapData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredSectors = useMemo(() => {
-    return MOCK_SECTORS.filter((sector) => {
+    return sectors.filter((sector) => {
       if (hazardFilter !== "all" && sector.hazard !== hazardFilter) return false;
       if (staleOnly && !sector.isStale) return false;
       return true;
     });
-  }, [hazardFilter, staleOnly]);
+  }, [sectors, hazardFilter, staleOnly]);
 
   const activeSector =
     filteredSectors.find((s) => s.id === selectedSector.id) ?? filteredSectors[0] ?? null;
@@ -28,7 +80,7 @@ export function MapPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            Spatial Risk Layer • Sample Telemetry
+            Spatial Risk Layer • {isLive ? "Live Backend Telemetry" : "Sample Telemetry"}
           </span>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
             Multi-Hazard Risk Map
@@ -75,6 +127,16 @@ export function MapPage() {
         </div>
       </div>
 
+      {error && !isLive && (
+        <div
+          role="alert"
+          className="p-3 rounded-lg bg-surface-card border border-border-hairline text-xs text-text-muted flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px] text-amber-500">info</span>
+          <span>Backend spatial API unavailable ({error}). Displaying baseline cached sectors.</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <div className="lg:col-span-8 flex flex-col gap-3">
           <HazardMap
@@ -99,7 +161,7 @@ export function MapPage() {
               </span>
             </div>
             <span className="text-[11px] text-text-muted">
-              Showing {filteredSectors.length} of {MOCK_SECTORS.length} sectors
+              Showing {filteredSectors.length} of {sectors.length} sectors
             </span>
           </div>
         </div>
@@ -142,7 +204,7 @@ export function MapPage() {
                   <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
                 </Link>
                 <Link
-                  to="/field-log"
+                  to={`/field-log?sector=${activeSector.id}&hazard=${activeSector.hazard}`}
                   className="inline-flex items-center justify-center h-9 px-3 rounded-full bg-surface-container hover:bg-surface-container-high text-text-primary text-xs font-semibold"
                 >
                   Field Log
