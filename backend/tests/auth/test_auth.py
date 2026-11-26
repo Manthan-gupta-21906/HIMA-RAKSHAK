@@ -105,6 +105,20 @@ def test_insufficient_role_gets_403() -> None:
         json={"username": "viewer", "password": "viewer1234"},
     )
     token = login_resp.json()["access_token"]
+    # Forged X-User-Role header without JWT must be rejected
+    forged_resp = client.post(
+        "/locations",
+        json={
+            "location_id": "JK-ROLE-01",
+            "name": "Role Test",
+            "admin_unit": "Test District",
+            "latitude": 34.0,
+            "longitude": 75.0,
+        },
+        headers={"X-User-Role": "admin"},
+    )
+    assert forged_resp.status_code == 401
+
     # Viewers should be forbidden from creating locations (admin-only)
     response = client.post(
         "/locations",
@@ -115,7 +129,6 @@ def test_insufficient_role_gets_403() -> None:
             "latitude": 34.0,
             "longitude": 75.0,
         },
-        headers={"Authorization": f"Bearer {token}", "X-User-Role": "viewer"},
+        headers={"Authorization": f"Bearer {token}"},
     )
-    # Location create requires admin role via X-User-Role header
     assert response.status_code == 403
