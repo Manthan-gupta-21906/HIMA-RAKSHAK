@@ -1,0 +1,874 @@
+{
+  "info": {
+    "_postman_id": "hima-rakshak-api-collection-v1",
+    "name": "HIMA-RAKSHAK API Collection",
+    "description": "Comprehensive Postman API collection for HIMA-RAKSHAK multi-hazard decision-support dashboard, covering Auth, Locations, Observations, Risk Assessments, Sources, and Official Warnings.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "viewerToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "Endpoints for authenticating and inspecting current session tokens.",
+      "item": [
+        {
+          "name": "Login (Admin) - Stores adminToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set(\"adminToken\", jsonData.access_token);",
+                  "    pm.environment.set(\"token\", jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"Admin\",\n  \"password\": \"Admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate as system admin. Automatically extracts JWT into adminToken collection variable."
+          }
+        },
+        {
+          "name": "Login (Operator) - Stores operatorToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set(\"operatorToken\", jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operator\",\n  \"password\": \"operator1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate as district operator. Extracts JWT into operatorToken variable."
+          }
+        },
+        {
+          "name": "Login (Viewer) - Stores viewerToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set(\"viewerToken\", jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer\",\n  \"password\": \"viewer1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate as read-only viewer. Extracts JWT into viewerToken variable."
+          }
+        },
+        {
+          "name": "Get Current User Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Fetch profile details and role of the currently authenticated token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Pilot Locations",
+      "description": "Catalogue of pilot locations with geospatial metadata, hazards, and coverage.",
+      "item": [
+        {
+          "name": "List Locations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations?page=1&page_size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List pilot locations with pagination and coverage filters."
+          }
+        },
+        {
+          "name": "Search Locations by Query & Hazard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations?q=Srinagar&hazard_type=flood&coverage_status=supported",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Srinagar"
+                },
+                {
+                  "key": "hazard_type",
+                  "value": "flood"
+                },
+                {
+                  "key": "coverage_status",
+                  "value": "supported"
+                }
+              ]
+            },
+            "description": "Search locations filtered by hazard and coverage."
+          }
+        },
+        {
+          "name": "Get Location Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/JK-SGR-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "JK-SGR-01"
+              ]
+            },
+            "description": "Fetch single location profile including geometry and supported hazard list."
+          }
+        },
+        {
+          "name": "Create Location (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location_id\": \"JK-PCH-01\",\n  \"name\": \"Poonch Valley Gauge Sector\",\n  \"admin_unit\": \"Poonch District, J&K\",\n  \"latitude\": 33.77,\n  \"longitude\": 74.1,\n  \"supported_hazards\": [\n    \"flood\"\n  ],\n  \"coverage_status\": \"supported\",\n  \"coverage_note\": \"Pilot hydrological gauge baseline established.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ]
+            },
+            "description": "Register a new pilot location. Requires Admin role."
+          }
+        },
+        {
+          "name": "Update Location Coverage (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coverage_status\": \"supported\",\n  \"coverage_note\": \"Upgraded sensor telemetry operational.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations/JK-PCH-01/coverage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "JK-PCH-01",
+                "coverage"
+              ]
+            },
+            "description": "Update coverage tier and operational status notes for a location. Admin only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Observations",
+      "description": "Environmental measurements and field telemetry (river gauge, rain, snowpack, wind).",
+      "item": [
+        {
+          "name": "List Observations by Location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations?location_id=JK-SGR-01&page=1&page_size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "location_id",
+                  "value": "JK-SGR-01"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List environmental time-series observations for a location."
+          }
+        },
+        {
+          "name": "Filter Observations by Metric & Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/observations?location_id=JK-SGR-01&metric=rain_mm&since=2026-11-20T00:00:00Z",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ],
+              "query": [
+                {
+                  "key": "location_id",
+                  "value": "JK-SGR-01"
+                },
+                {
+                  "key": "metric",
+                  "value": "rain_mm"
+                },
+                {
+                  "key": "since",
+                  "value": "2026-11-20T00:00:00Z"
+                }
+              ]
+            },
+            "description": "Filter observations by specific metric and time horizon."
+          }
+        },
+        {
+          "name": "Submit Observation (Operator / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location_id\": \"JK-SGR-01\",\n  \"hazard_type\": \"flood\",\n  \"metric\": \"rain_mm\",\n  \"value\": 32.5,\n  \"unit\": \"mm\",\n  \"notes\": \"Heavy cloud cover and gauge level increase recorded during field inspection.\",\n  \"source_id\": \"src-field-obs\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/observations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "observations"
+              ]
+            },
+            "description": "Submit field observation with validation of physical bounds, metric compatibility, and units."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Risk Assessments",
+      "description": "Co-located multi-hazard risk engine outputs with uncertainty, freshness, and provenance.",
+      "item": [
+        {
+          "name": "Get Current Risk by Location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/risk/current/JK-SGR-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "risk",
+                "current",
+                "JK-SGR-01"
+              ]
+            },
+            "description": "Fetch latest distinct risk assessment for flood and avalanche pathways at a location."
+          }
+        },
+        {
+          "name": "Get Unified Multi-Hazard Spatial State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/risk/state/JK-SGR-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "risk",
+                "state",
+                "JK-SGR-01"
+              ]
+            },
+            "description": "Return unified spatial risk state, including primary hazard, highest risk class, and lead time."
+          }
+        },
+        {
+          "name": "Get Risk History by Location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/risk/history/JK-SGR-01?hazard_type=flood&page=1&page_size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "risk",
+                "history",
+                "JK-SGR-01"
+              ],
+              "query": [
+                {
+                  "key": "hazard_type",
+                  "value": "flood"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Query historical log of risk assessments for auditability and trend analysis."
+          }
+        },
+        {
+          "name": "Trigger Risk Assessment (Operator / Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Assessment returned\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(jsonData).to.have.property(\"location_id\");",
+                  "    pm.expect(jsonData).to.have.property(\"assessments\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cutoff_at\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/risk/assess/JK-SGR-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "risk",
+                "assess",
+                "JK-SGR-01"
+              ]
+            },
+            "description": "Trigger an on-demand multi-hazard risk assessment for a pilot location using persisted observations. Requires Operator or Admin role. Returns a LocationRiskState containing flood and avalanche assessments with uncertainty and provenance. Flood pathway will be UNSUPPORTED until a fitted model is supplied externally. Pass \\\"cutoff_at\\\" (ISO-8601 UTC) to restrict which observations feed the assessment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Sources Registry",
+      "description": "Provenance registry tracking telemetry sources, licences, update cadences, and freshness.",
+      "item": [
+        {
+          "name": "List Registered Sources",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sources"
+              ]
+            },
+            "description": "List all telemetry and data sources with computed freshness status."
+          }
+        },
+        {
+          "name": "Get Source by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sources/src-cwc-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sources",
+                "src-cwc-01"
+              ]
+            },
+            "description": "Retrieve specific data source contract and provenance metadata."
+          }
+        },
+        {
+          "name": "Register New Source (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_id\": \"src-imd-sgr-aws\",\n  \"source_name\": \"IMD Srinagar Automated Weather Station\",\n  \"provider\": \"India Meteorological Department (IMD)\",\n  \"dataset\": \"surface_synoptic_telemetry\",\n  \"source_type\": \"weather\",\n  \"access_mode\": \"live\",\n  \"licence\": \"Government Open Data Licence - India (GODL)\",\n  \"reference_url\": \"https://mausam.imd.gov.in/\",\n  \"update_frequency_minutes\": 30,\n  \"trust_classification\": \"authoritative\",\n  \"is_authoritative\": true,\n  \"is_demo_fixture\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sources"
+              ]
+            },
+            "description": "Register an upstream data source with cadence and trust classification. Admin only."
+          }
+        },
+        {
+          "name": "Record Source Fetch Event (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sources/src-cwc-01/fetch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sources",
+                "src-cwc-01",
+                "fetch"
+              ]
+            },
+            "description": "Record data ingestion from a source, updating its last_fetched_at timestamp and freshness."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Official Warnings",
+      "description": "Read-only authoritative bulletins from CWC, DGRE, and IMD, distinct from model assessments.",
+      "item": [
+        {
+          "name": "List Official Warnings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warnings?is_expired=false&page=1&page_size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings"
+              ],
+              "query": [
+                {
+                  "key": "is_expired",
+                  "value": "false"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List authoritative warnings preserving issuing authority, validity window, and provenance."
+          }
+        },
+        {
+          "name": "Filter Warnings by Authority & Location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warnings?authority=CWC&location_id=JK-SGR-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings"
+              ],
+              "query": [
+                {
+                  "key": "authority",
+                  "value": "CWC"
+                },
+                {
+                  "key": "location_id",
+                  "value": "JK-SGR-01"
+                }
+              ]
+            },
+            "description": "Filter warnings by issuing authority and target location."
+          }
+        },
+        {
+          "name": "Get Warning Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{viewerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warnings/WARN-CWC-2026-104",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings",
+                "WARN-CWC-2026-104"
+              ]
+            },
+            "description": "Fetch individual authoritative bulletin details and source reference URL."
+          }
+        },
+        {
+          "name": "Curate / Ingest Warning (Operator / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warning_id\": \"WARN-IMD-2026-088\",\n  \"authority\": \"IMD\",\n  \"hazard_type\": \"flood\",\n  \"location_id\": \"JK-SGR-01\",\n  \"severity_label\": \"Orange\",\n  \"headline\": \"Heavy Rainfall & Flash Flood Advisory \\u2014 Jhelum Catchment\",\n  \"geographic_scope\": \"Srinagar and Budgam Districts\",\n  \"summary\": \"Widespread heavy to very heavy precipitation likely in the upper catchment over next 24 hours.\",\n  \"advisory_notes\": \"Authorities advised to monitor river and stream gauges and alert low-lying areas.\",\n  \"source_url\": \"https://mausam.imd.gov.in/srinagar/bulletins/2026-088\",\n  \"source_reference\": \"IMD Meteorological Centre Srinagar Nowcast #88\",\n  \"issued_at\": \"2026-11-26T08:00:00Z\",\n  \"valid_until\": \"2026-11-27T08:00:00Z\",\n  \"provenance\": \"official:imd-bulletin-2026-088\",\n  \"is_demo_fixture\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/warnings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings"
+              ]
+            },
+            "description": "Curate or ingest official authority bulletin. Operator or Admin role required."
+          }
+        },
+        {
+          "name": "Import Sample Warning Fixtures (Operator / Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warnings/import-fixtures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings",
+                "import-fixtures"
+              ]
+            },
+            "description": "Idempotently import standard sample warning fixtures labelled as demo fixtures."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. System & Health",
+      "description": "System diagnostics and health status.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns runtime status, version, and environment configuration."
+          }
+        }
+      ]
+    }
+  ]
+}
