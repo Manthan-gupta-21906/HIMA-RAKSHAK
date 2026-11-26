@@ -373,7 +373,6 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     logger.info("Initializing database with demo data...")
     engine = create_db_engine()
-    Base.metadata.create_all(bind=engine)
     factory = get_session_factory(engine)
     with factory() as db:
         results = seed_all_demo_data(db)

@@ -5,10 +5,10 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 
+from alembic import command
 from app.api.routes import auth as auth_routes
 from app.config import Settings
 from app.core.security import create_access_token, hash_password, verify_password
