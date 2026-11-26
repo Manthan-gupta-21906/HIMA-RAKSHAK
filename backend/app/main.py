@@ -9,6 +9,7 @@ from app.api.routes.locations import router as locations_router
 from app.api.routes.observations import router as observations_router
 from app.api.routes.risk import router as risk_router
 from app.api.routes.sources import router as sources_router
+from app.api.routes.warnings import router as warnings_router
 from app.config import Settings, get_settings
 from app.core.errors import ErrorDetail, build_error_envelope
 
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     app.include_router(sources_router)
     app.include_router(observations_router)
     app.include_router(risk_router)
+    app.include_router(warnings_router)
     return app
 
 
