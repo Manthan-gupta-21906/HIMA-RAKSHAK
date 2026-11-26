@@ -83,7 +83,7 @@ export function OverviewPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {MOCK_SECTORS.map((sector) => (
+          {MOCK_SECTORS.filter((s) => s.isPriority).map((sector) => (
             <article
               key={sector.id}
               className={`bg-surface-card rounded-xl p-5 border border-border-hairline shadow-xs flex flex-col justify-between gap-4 ${
