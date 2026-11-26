@@ -7,9 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.auth import require_any_authenticated
-from app.db.base import Base
-from app.db.session import create_db_engine, get_session_factory
+from app.db.session import get_db
+from app.models.location import LocationModel  # noqa: F401
+from app.models.observation import ObservationModel  # noqa: F401
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
+from app.models.source import SourceModel  # noqa: F401
 from app.repositories.risk_repository import RiskAssessmentRepository
 from app.schemas.common import HazardType, PaginationMeta
 from app.schemas.risk import (
@@ -22,24 +24,12 @@ from app.services.risk_service import RiskService
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
-_engine = create_db_engine()
-Base.metadata.create_all(bind=_engine)
-_session_factory = get_session_factory(_engine)
+
+def _get_db() -> Generator[Session, None, None]:
+    yield from get_db()
 
 
-def get_db() -> Generator[Session, None, None]:
-    db = _session_factory()
-    try:
-        yield db
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
-
-def get_risk_service(db: Session = Depends(get_db)) -> RiskService:
+def get_risk_service(db: Session = Depends(_get_db)) -> RiskService:
     return RiskService(RiskAssessmentRepository(db))
 
 

@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.api.routes.observations import get_db
+from app.api.routes.observations import _get_db
 from app.core.security import create_access_token
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
@@ -91,11 +91,11 @@ def _setup_test_db(tmp_path: Path) -> Generator[Session, None, None]:
         finally:
             db.close()
 
-    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[_get_db] = _override_get_db
     try:
         yield session
     finally:
-        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(_get_db, None)
         session.close()
 
 
