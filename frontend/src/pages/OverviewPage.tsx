@@ -1,21 +1,103 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchLocations } from "../api/locations";
+import { mapLocationAndRiskToSector } from "../api/mappers";
+import { fetchLocationRiskState } from "../api/risk";
 import { Badge } from "../components/ui/Badge";
 import { PageSkeleton } from "../components/ui/PageSkeleton";
-import { MOCK_SECTORS, REGIONAL_KPIS } from "../data/mockSectors";
+import { MOCK_SECTORS, REGIONAL_KPIS, type MonitoringSector, type RegionalKpi } from "../data/mockSectors";
 
-/** Regional Hazard Monitor overview matching Stitch main_dashboard_map_priority_list. */
+/** Regional Hazard Monitor overview connected to backend location & risk APIs. */
 export function OverviewPage() {
+  const [sectors, setSectors] = useState<MonitoringSector[]>(MOCK_SECTORS);
+  const [kpis, setKpis] = useState<RegionalKpi[]>(REGIONAL_KPIS);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string>("Sample Data");
+
+  const loadData = async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    setError(null);
+
+    try {
+      const locResponse = await fetchLocations();
+      if (locResponse && Array.isArray(locResponse.items) && locResponse.items.length > 0) {
+        // Fetch risk states for all locations
+        const mappedSectors = await Promise.all(
+          locResponse.items.map(async (loc) => {
+            try {
+              const riskState = await fetchLocationRiskState(loc.location_id);
+              return mapLocationAndRiskToSector(loc, riskState);
+            } catch {
+              return mapLocationAndRiskToSector(loc, null);
+            }
+          })
+        );
+
+        setSectors(mappedSectors);
+        setIsLive(true);
+        setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+
+        // Compute real KPIs from backend data
+        const alertCount = mappedSectors.filter(
+          (s) => s.isPriority || s.riskTier === "High Risk" || s.riskTier === "Stage 3"
+        ).length;
+        const nominalCount = mappedSectors.filter((s) => !s.isStale).length;
+        const delayedCount = mappedSectors.filter((s) => s.isStale).length;
+
+        setKpis([
+          {
+            label: "Active Alerts",
+            value: `${alertCount} Sectors`,
+            subtitle: alertCount > 0 ? "Requires active attention" : "Nominal baseline",
+          },
+          {
+            label: "Monitored Locations",
+            value: `${mappedSectors.length} Active`,
+            subtitle: `${nominalCount} nominal, ${delayedCount} delayed`,
+          },
+          {
+            label: "River Basins",
+            value: `${mappedSectors.filter((s) => s.hazard === "flood").length} Flood`,
+            subtitle: "Jhelum & Chenab basins",
+          },
+          {
+            label: "Alpine Ridges",
+            value: `${mappedSectors.filter((s) => s.hazard === "avalanche").length} Avalanche`,
+            subtitle: "Gulmarg & Pir Panjal",
+          },
+        ]);
+      } else if (locResponse && Array.isArray(locResponse.items) && locResponse.items.length === 0) {
+        setSectors([]);
+        setIsLive(true);
+      }
+    } catch (err) {
+      // In unit tests or when backend is unavailable, log and keep default fallback
+      setError((err as Error).message || "Could not connect to backend service");
+    } finally {
+      if (!isManualRefresh) {
+        setIsRefreshing(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    loadData(true);
     window.setTimeout(() => setIsRefreshing(false), 350);
   };
 
   if (isRefreshing) {
     return <PageSkeleton />;
   }
+
+  const prioritySectors = sectors.filter((s) => s.isPriority || s.riskTier === "High Risk" || s.riskTier === "Stage 3");
+  const displaySectors = prioritySectors.length > 0 ? prioritySectors : sectors;
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +108,9 @@ export function OverviewPage() {
               Sector J&amp;K Overview
             </span>
             <span className="text-border-hairline">•</span>
-            <span className="text-[10px] font-semibold text-secondary">Updated 2m ago (Sample Data)</span>
+            <span className="text-[10px] font-semibold text-secondary">
+              {isLive ? `Live Backend Data • Updated ${lastUpdated}` : `Updated 2m ago (${lastUpdated})`}
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">
             Regional Hazard Monitor
@@ -39,9 +123,13 @@ export function OverviewPage() {
         <div className="flex items-center gap-2 self-start md:self-auto">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-border-hairline text-xs">
             <span className="material-symbols-outlined text-[16px] text-agency-dgre">warning</span>
-            <span className="font-medium text-text-primary">47/48 Stations Synced</span>
+            <span className="font-medium text-text-primary">
+              {sectors.length > 0 ? `${sectors.filter((s) => !s.isStale).length}/${sectors.length} Stations Synced` : "0 Stations"}
+            </span>
             <span className="text-border-hairline">•</span>
-            <span className="font-semibold text-agency-dgre">1 Delayed</span>
+            <span className="font-semibold text-agency-dgre">
+              {sectors.filter((s) => s.isStale).length} Delayed
+            </span>
           </div>
           <button
             type="button"
@@ -61,8 +149,27 @@ export function OverviewPage() {
         </div>
       </div>
 
+      {error && !isLive && (
+        <div
+          role="alert"
+          className="p-3.5 rounded-xl bg-surface-card border border-border-hairline flex items-center justify-between gap-3 text-xs"
+        >
+          <div className="flex items-center gap-2 text-text-muted">
+            <span className="material-symbols-outlined text-[18px] text-amber-500">wifi_off</span>
+            <span>Backend API currently offline: {error}. Showing baseline catalogue.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => loadData(true)}
+            className="px-3 py-1 rounded bg-surface-container hover:bg-surface-container-high text-text-primary font-semibold"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       <section aria-label="Regional KPIs" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {REGIONAL_KPIS.map((kpi) => (
+        {kpis.map((kpi) => (
           <div
             key={kpi.label}
             className="p-4 rounded-xl bg-surface-card border border-border-hairline flex flex-col gap-1"
@@ -91,7 +198,7 @@ export function OverviewPage() {
               Priority Monitoring Sectors
             </h2>
             <span className="text-xs text-secondary">
-              ({MOCK_SECTORS.length} locations requiring active review)
+              ({displaySectors.length} locations requiring active review)
             </span>
           </div>
           <Link
@@ -103,58 +210,66 @@ export function OverviewPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {MOCK_SECTORS.filter((s) => s.isPriority).map((sector) => (
-            <article
-              key={sector.id}
-              className={`bg-surface-card rounded-xl p-5 border border-border-hairline shadow-xs flex flex-col justify-between gap-4 ${
-                sector.riskTier === "High Risk" ? "border-l-[3px] border-l-emergency-red" : ""
-              }`}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                      {sector.id}
-                    </span>
-                    <h3 className="text-base font-bold text-text-primary mt-0.5">{sector.name}</h3>
+        {displaySectors.length === 0 ? (
+          <div className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center text-text-muted text-sm">
+            No locations currently requiring priority review.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {displaySectors.map((sector) => (
+              <article
+                key={sector.id}
+                className={`bg-surface-card rounded-xl p-5 border border-border-hairline shadow-xs flex flex-col justify-between gap-4 ${
+                  sector.riskTier === "High Risk" ? "border-l-[3px] border-l-emergency-red" : ""
+                }`}
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                        {sector.id}
+                      </span>
+                      <h3 className="text-base font-bold text-text-primary mt-0.5">{sector.name}</h3>
+                    </div>
+                    <Badge tone={sector.isStale ? "warning" : "neutral"}>
+                      {sector.updatedAgo?.includes("ago") ? sector.updatedAgo : `${sector.updatedAgo} • ${sector.isStale ? "stale" : "fresh"}`}
+                    </Badge>
                   </div>
-                  <Badge tone={sector.isStale ? "warning" : "neutral"}>{sector.updatedAgo}</Badge>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <Badge tone={sector.hazard === "flood" ? "emergency" : "dgre"}>
-                    {sector.threatLabel}
-                  </Badge>
-                  <Badge tone="neutral">{sector.riskTier}</Badge>
-                </div>
-
-                <p className="text-xs text-secondary pt-1">{sector.summaryMetric}</p>
-              </div>
-
-              <div className="pt-3 border-t border-border-hairline flex flex-col gap-2">
-                <span className="text-xs font-medium text-text-muted">{sector.exposureSummary}</span>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        sector.confidence === "High" ? "bg-alert-green" : "bg-amber-500"
-                      }`}
-                    />
-                    <span>{sector.confidence} Confidence</span>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <Badge tone={sector.hazard === "flood" ? "emergency" : "dgre"}>
+                      {sector.threatLabel}
+                    </Badge>
+                    <Badge tone="neutral">{sector.riskTier}</Badge>
                   </div>
-                  <Link
-                    to={`/locations/${sector.id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border-hairline bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-text-primary transition-colors"
-                  >
-                    <span>View Details</span>
-                    <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-                  </Link>
+
+                  <p className="text-xs text-secondary pt-1">{sector.summaryMetric}</p>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+
+                <div className="pt-3 border-t border-border-hairline flex flex-col gap-2">
+                  <span className="text-xs font-medium text-text-muted">{sector.exposureSummary}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          sector.confidence === "High" ? "bg-alert-green" : "bg-amber-500"
+                        }`}
+                      />
+                      <span>{sector.confidence} Confidence</span>
+                    </div>
+                    <Link
+                      to={`/locations/${sector.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border-hairline bg-surface-container-low hover:bg-surface-container text-xs font-semibold text-text-primary transition-colors"
+                    >
+                      <span>View Details</span>
+                      <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <footer className="p-4 rounded-xl bg-surface-card border border-border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-3">

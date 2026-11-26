@@ -1,6 +1,5 @@
 """Tests for official warning ingestion and sample fixture preservation."""
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 from alembic.config import Config
@@ -11,7 +10,6 @@ from app.db.session import create_db_engine, get_session_factory
 from app.ingestion.warning_import import (
     SAMPLE_WARNING_FIXTURES,
     import_sample_fixtures,
-    import_warning_record,
     load_sample_warning_fixtures,
 )
 from app.models.location import LocationModel
@@ -57,7 +55,12 @@ def test_sample_warning_fixtures_are_clearly_labelled() -> None:
     for item in fixtures:
         # Verify clear labelling as sample/demo fixture
         assert item.is_demo_fixture is True
-        assert item.authority in (WarningAuthority.CWC, WarningAuthority.DGRE, WarningAuthority.IMD, WarningAuthority.SDMA)
+        assert item.authority in (
+            WarningAuthority.CWC,
+            WarningAuthority.DGRE,
+            WarningAuthority.IMD,
+            WarningAuthority.SDMA,
+        )
         assert item.source_reference is not None
         assert "Sample" in item.source_reference
         # Verify valid window logic

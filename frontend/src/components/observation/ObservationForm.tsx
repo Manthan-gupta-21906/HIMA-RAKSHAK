@@ -198,6 +198,10 @@ export function ObservationForm({
           </div>
         </div>
 
+        <div className="w-full p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 dark:text-amber-200 text-left mb-2">
+          <span className="font-semibold">Backend Notice:</span> The backend currently lacks <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">POST /observations</code>. This observation has been captured locally and not persisted to remote database.
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="primary" onClick={handleReset} className="flex-1 sm:w-auto">
             Log Another Observation
@@ -212,6 +216,19 @@ export function ObservationForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+      {/* Backend Integration Notice */}
+      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+        <span className="material-symbols-outlined text-[18px] text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+          info
+        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="font-bold">Missing Backend Endpoint: POST /observations</span>
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+            The backend API currently implements only <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">GET /observations</code> (read-only). A dedicated <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-amber-500/20">POST /observations</code> submission route is not yet available on the server. Observations submitted here are captured in local session memory.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label

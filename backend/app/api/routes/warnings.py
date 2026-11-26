@@ -34,7 +34,9 @@ def get_warning_repository(db: Session = Depends(_get_db)) -> OfficialWarningRep
 def list_warnings(
     location_id: str | None = Query(default=None, description="Filter by location identifier"),
     hazard_type: HazardType | None = Query(default=None, description="Filter by hazard type"),
-    authority: WarningAuthority | None = Query(default=None, description="Filter by issuing authority"),
+    authority: WarningAuthority | None = Query(
+        default=None, description="Filter by issuing authority"
+    ),
     is_expired: bool | None = Query(default=None, description="Filter by expiration status"),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
@@ -93,7 +95,11 @@ def create_warning(
     return repo.to_contract(model)
 
 
-@router.post("/import-fixtures", response_model=list[OfficialWarningContract], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/import-fixtures",
+    response_model=list[OfficialWarningContract],
+    status_code=status.HTTP_201_CREATED,
+)
 def import_fixtures(
     _operator: object = Depends(require_operator),
     db: Session = Depends(_get_db),

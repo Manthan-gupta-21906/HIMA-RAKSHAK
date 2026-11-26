@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
+import { fetchWarnings } from "../api/warnings";
+import { mapWarningContractToOfficialWarning } from "../api/mappers";
 import { MOCK_WARNINGS } from "../data/mockWarnings";
 import { WarningPanel } from "../features/warnings/WarningPanel";
 import type {
@@ -27,15 +29,56 @@ const SEVERITY_TONE: Record<WarningSeverity, BadgeTone> = {
 
 /** Read-only authoritative agency warnings listing with filters and detail panel. */
 export function WarningsPage() {
+  const [warnings, setWarnings] = useState<OfficialWarning[]>(MOCK_WARNINGS);
+  const [isLive, setIsLive] = useState(false);
+  const [, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const [agencyFilter, setAgencyFilter] = useState<AgencyFilter>("all");
   const [hazardFilter, setHazardFilter] = useState<HazardFilter>("all");
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string>(MOCK_WARNINGS[0].id);
+  const [selectedId, setSelectedId] = useState<string>(MOCK_WARNINGS[0]?.id ?? "");
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadWarnings() {
+      try {
+        setLoading(true);
+        const res = await fetchWarnings();
+        if (isMounted && res.items && res.items.length > 0) {
+          const mapped = res.items.map(mapWarningContractToOfficialWarning);
+          setWarnings(mapped);
+          setIsLive(true);
+          setApiError(null);
+          if (mapped.length > 0) {
+            setSelectedId(mapped[0].id);
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setApiError(
+            err instanceof Error
+              ? `Backend /warnings API: ${err.message}. Showing sample cached bulletins.`
+              : "Backend /warnings API unreachable."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadWarnings();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredWarnings = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return MOCK_WARNINGS.filter((w) => {
+    return warnings.filter((w) => {
       if (agencyFilter !== "all" && w.agency !== agencyFilter) return false;
       if (hazardFilter !== "all" && w.hazard !== hazardFilter) return false;
       if (severityFilter !== "all" && w.severity !== severityFilter) return false;
@@ -49,7 +92,7 @@ export function WarningsPage() {
       }
       return true;
     });
-  }, [agencyFilter, hazardFilter, severityFilter, searchQuery]);
+  }, [warnings, agencyFilter, hazardFilter, severityFilter, searchQuery]);
 
   const activeWarning: OfficialWarning | null =
     filteredWarnings.find((w) => w.id === selectedId) ?? filteredWarnings[0] ?? null;
@@ -63,6 +106,11 @@ export function WarningsPage() {
               Authoritative Agency Bulletins
             </span>
             <Badge tone="neutral">Read-Only</Badge>
+            {isLive ? (
+              <Badge tone="clear">Live Backend Feed</Badge>
+            ) : (
+              <Badge tone="neutral">Sample Cached Bulletins</Badge>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
             Official Warnings
@@ -74,9 +122,21 @@ export function WarningsPage() {
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-card border border-border-hairline text-xs text-text-muted self-start lg:self-auto">
           <span className="material-symbols-outlined text-[16px] text-text-primary">lock</span>
-          <span className="font-medium text-text-primary">Sample Cached Bulletins • Unmodified</span>
+          <span className="font-medium text-text-primary">
+            {isLive ? "Live Authoritative Bulletins • Unmodified" : "Sample Cached Bulletins • Unmodified"}
+          </span>
         </div>
       </div>
+
+      {apiError && (
+        <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-amber-500">info</span>
+            <span>{apiError}</span>
+          </div>
+          <span className="text-[11px] font-medium text-text-muted">GET /warnings</span>
+        </div>
+      )}
 
       <section
         aria-label="Warning filters"

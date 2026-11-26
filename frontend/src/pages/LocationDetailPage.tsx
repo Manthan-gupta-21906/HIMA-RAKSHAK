@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { fetchLocationDetail, type LocationOut } from "../api/locations";
+import { fetchLocationRiskState, type LocationRiskState } from "../api/risk";
 import { HazardEngineCard } from "../components/location/HazardEngineCard";
 import { LocationKpiCard } from "../components/location/LocationKpiCard";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
@@ -43,6 +46,30 @@ export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sector = MOCK_SECTORS.find((item) => item.id === id);
   const detail = id ? getLocationDetail(id) : null;
+  const [liveLocation, setLiveLocation] = useState<LocationOut | null>(null);
+  const [, setLiveRiskState] = useState<LocationRiskState | null>(null);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    Promise.allSettled([fetchLocationDetail(id), fetchLocationRiskState(id)])
+      .then(([locRes, riskRes]) => {
+        if (!isMounted) return;
+        if (locRes.status === "fulfilled") {
+          setLiveLocation(locRes.value);
+          setIsLiveConnected(true);
+        }
+        if (riskRes.status === "fulfilled") {
+          setLiveRiskState(riskRes.value);
+          setIsLiveConnected(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   if (!sector || !detail) {
     return (
@@ -85,6 +112,8 @@ export function LocationDetailPage() {
             </Badge>
             <Badge tone="neutral">{sector.riskTier}</Badge>
             <Badge tone="neutral">{sector.elevationM} m</Badge>
+            {isLiveConnected && <Badge tone="clear">Live Backend Connected</Badge>}
+            {liveLocation && <Badge tone="neutral">Coverage: {liveLocation.coverage_status}</Badge>}
           </div>
         </div>
 
