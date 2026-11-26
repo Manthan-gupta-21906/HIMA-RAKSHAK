@@ -139,12 +139,17 @@ class RiskWorkflowService:
         location_id: str,
         *,
         trigger_alert: bool = True,
+        cutoff_at: datetime | None = None,
     ) -> RiskEvaluationResponse:
         """Extract features from observations, run hazard pathways, and compute priority."""
         location = self._get_location(location_id)
         obs_rows = self._obs_repo.list_by_location(location_id)
-        observations = [self._to_obs_contract(r) for r in obs_rows]
-        cutoff_at = datetime.now(UTC)
+        effective_cutoff = cutoff_at or datetime.now(UTC)
+        observations = [
+            obs
+            for obs in (self._to_obs_contract(r) for r in obs_rows)
+            if obs.observed_at <= effective_cutoff
+        ]
         terrain = PILOT_TERRAIN_CONTEXT.get(location_id, TerrainContext())
 
         supported = {
@@ -165,7 +170,7 @@ class RiskWorkflowService:
             flood_features = extract_flood_features(
                 location_id=location_id,
                 observations=observations,
-                cutoff_at=cutoff_at,
+                cutoff_at=effective_cutoff,
                 terrain=terrain,
             )
             flood_model = (
@@ -179,7 +184,7 @@ class RiskWorkflowService:
                     source_name="Central Water Commission & Field Telemetry",
                     licence="Government Open Data Licence - India (GODL)",
                     is_demo_fixture=False,
-                    ingested_at=cutoff_at,
+                    ingested_at=effective_cutoff,
                 ),
             )
 
@@ -188,7 +193,7 @@ class RiskWorkflowService:
             avalanche_features = extract_avalanche_features(
                 location_id=location_id,
                 observations=observations,
-                cutoff_at=cutoff_at,
+                cutoff_at=effective_cutoff,
                 terrain=terrain,
             )
             self._orchestrator.assess_avalanche(
@@ -198,7 +203,7 @@ class RiskWorkflowService:
                     source_name="DGRE Snowpack & Field Telemetry",
                     licence="Government Open Data Licence - India (GODL)",
                     is_demo_fixture=False,
-                    ingested_at=cutoff_at,
+                    ingested_at=effective_cutoff,
                 ),
             )
 

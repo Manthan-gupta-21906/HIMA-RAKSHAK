@@ -45,30 +45,6 @@ def get_risk_service(db: Session = Depends(_get_db)) -> RiskService:
     )
 
 
-@router.post(
-    "/assess/{location_id}",
-    response_model=LocationRiskState,
-    summary="Run multi-hazard risk assessment for a location",
-)
-def assess_location_risk(
-    location_id: str,
-    payload: RiskAssessmentRequest | None = None,
-    _operator: object = Depends(require_operator),
-    service: RiskService = Depends(get_risk_service),
-) -> LocationRiskState:
-    """Execute independent flood and avalanche assessment pathways and persist results."""
-    try:
-        return service.assess_location_risk(
-            location_id=location_id,
-            cutoff_at=payload.cutoff_at if payload else None,
-        )
-    except LocationNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-
 def get_risk_workflow_service(db: Session = Depends(_get_db)) -> RiskWorkflowService:
     return RiskWorkflowService(db)
 
@@ -149,6 +125,26 @@ def get_risk_state(
         ) from exc
 
 
+def _run_evaluate_location_risk(
+    location_id: str,
+    trigger_alert: bool,
+    workflow: RiskWorkflowService,
+    cutoff_at: datetime | None = None,
+) -> RiskEvaluationResponse:
+    """Shared implementation for /evaluate and /assess endpoints."""
+    try:
+        return workflow.evaluate_location(
+            location_id,
+            trigger_alert=trigger_alert,
+            cutoff_at=cutoff_at,
+        )
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
 @router.post(
     "/evaluate/{location_id}",
     response_model=RiskEvaluationResponse,
@@ -156,6 +152,7 @@ def get_risk_state(
 )
 def evaluate_location_risk(
     location_id: str,
+    payload: RiskAssessmentRequest | None = None,
     trigger_alert: bool = Query(
         default=True,
         description="Whether to persist an operational alert if priority warrants action",
@@ -164,13 +161,36 @@ def evaluate_location_risk(
     workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
 ) -> RiskEvaluationResponse:
     """Controlled assessment workflow extracting features from persisted observations."""
-    try:
-        return workflow.evaluate_location(location_id, trigger_alert=trigger_alert)
-    except LocationNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    return _run_evaluate_location_risk(
+        location_id,
+        trigger_alert,
+        workflow,
+        cutoff_at=payload.cutoff_at if payload else None,
+    )
+
+
+@router.post(
+    "/assess/{location_id}",
+    response_model=RiskEvaluationResponse,
+    summary="Assess hazard risk, exposure, priority, and alerts from observations",
+)
+def assess_location_risk(
+    location_id: str,
+    payload: RiskAssessmentRequest | None = None,
+    trigger_alert: bool = Query(
+        default=True,
+        description="Whether to persist an operational alert if priority warrants action",
+    ),
+    _user: object = Depends(require_operator),
+    workflow: RiskWorkflowService = Depends(get_risk_workflow_service),
+) -> RiskEvaluationResponse:
+    """Alias for /evaluate: same controlled assessment workflow via /risk/assess."""
+    return _run_evaluate_location_risk(
+        location_id,
+        trigger_alert,
+        workflow,
+        cutoff_at=payload.cutoff_at if payload else None,
+    )
 
 
 @router.get(

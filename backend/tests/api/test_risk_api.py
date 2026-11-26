@@ -274,7 +274,9 @@ def test_assess_location_risk_persists_and_updates_retrieval_endpoints() -> None
         headers=headers,
     )
     assert res.status_code == 200
-    state = res.json()
+    data = res.json()
+    assert data["location_id"] == "JK-SGR-01"
+    state = data["risk_state"]
     assert state["location_id"] == "JK-SGR-01"
     assert state["flood"] is not None
     assert state["flood"]["prediction_status"] == "unsupported"

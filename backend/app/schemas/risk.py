@@ -50,7 +50,7 @@ class LocationRiskState(BaseModel):
     flood: RiskAssessmentContract | None = None
     avalanche: RiskAssessmentContract | None = None
     primary_hazard: HazardType | None = None
-    highest_risk_class: RiskClass = RiskClass.LOW
+    highest_risk_class: RiskClass = RiskClass.UNSUPPORTED
 
 
 class RiskHistoryResponse(BaseModel):

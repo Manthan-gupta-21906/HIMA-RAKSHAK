@@ -85,3 +85,44 @@ export async function fetchRiskHistory(
     `/risk/history/${encodeURIComponent(locationId)}${qs ? `?${qs}` : ""}`
   );
 }
+
+export interface RiskEvaluationResponse {
+  location_id: string;
+  risk_state: LocationRiskState;
+  exposure: {
+    location_id: string;
+    population_exposed: number;
+    roads_exposed_km: number;
+    critical_facilities_count: number;
+    coverage_status: string;
+  };
+  priority: {
+    location_id: string;
+    priority_level: string;
+    priority_score: number;
+    hazard_risk_class: string;
+    prediction_status: string;
+    explanation: string[];
+  };
+  alert?: {
+    alert_id: string;
+    priority_level: string;
+    title: string;
+  } | null;
+}
+
+/**
+ * Trigger controlled observation -> risk -> exposure -> priority -> alert evaluation
+ * (POST /risk/evaluate/{location_id}).
+ */
+export async function evaluateLocationRisk(
+  locationId: string,
+  triggerAlert = true
+): Promise<RiskEvaluationResponse> {
+  return apiClient<RiskEvaluationResponse>(
+    `/risk/evaluate/${encodeURIComponent(locationId)}?trigger_alert=${triggerAlert}`,
+    {
+      method: "POST",
+    }
+  );
+}

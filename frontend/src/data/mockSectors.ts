@@ -1,5 +1,5 @@
 export type HazardPathway = "flood" | "avalanche";
-export type RiskTier = "High Risk" | "Stage 3" | "Moderate" | "Low";
+export type RiskTier = "High Risk" | "Stage 3" | "Moderate" | "Low" | "Unsupported";
 
 export interface MonitoringSector {
   id: string;

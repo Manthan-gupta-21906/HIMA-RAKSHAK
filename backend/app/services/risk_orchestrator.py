@@ -196,7 +196,7 @@ class RiskOrchestrator:
             updated_at = max(c.assessed_at for c in candidates)
 
         # Determine highest risk class and primary hazard
-        highest_class = RiskClass.LOW
+        highest_class = RiskClass.UNSUPPORTED
         primary_hazard = None
         max_severity = -1
 
