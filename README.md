@@ -329,5 +329,6 @@ In compliance with disaster management engineering safety standards:
 4. **No Autonomous Executive Orders:** The system is an advisory Decision-Support System (DDSS). Official IMD/CWC/DGRE bulletins remain authoritative and read-only. HIMA-RAKSHAK does not issue autonomous or binding evacuation or highway-closure mandates.
 5. **Geographic Pilot Boundary:** High-resolution spatial exposure models are calibrated specifically for Jammu & Kashmir pilot sectors (Srinagar, Gulmarg, Banihal NH-44, and Drass corridors).
 
-  
+ 
+
 
