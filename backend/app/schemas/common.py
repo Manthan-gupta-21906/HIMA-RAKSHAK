@@ -59,3 +59,12 @@ class ProvenanceMeta(BaseModel):
     licence: str = Field(..., min_length=2, max_length=120)
     is_demo_fixture: bool = True
     ingested_at: AwareDatetime
+
+
+class PaginationMeta(BaseModel):
+    """Pagination metadata container."""
+
+    total: int
+    page: int
+    page_size: int
+    has_next: bool

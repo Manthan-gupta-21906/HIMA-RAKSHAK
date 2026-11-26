@@ -6,6 +6,7 @@ from app.schemas.common import (
     AwareDatetime,
     FreshnessStatus,
     HazardType,
+    PaginationMeta,
     PredictionStatus,
     ProvenanceMeta,
     RiskClass,
@@ -50,3 +51,11 @@ class LocationRiskState(BaseModel):
     avalanche: RiskAssessmentContract | None = None
     primary_hazard: HazardType | None = None
     highest_risk_class: RiskClass = RiskClass.LOW
+
+
+class RiskHistoryResponse(BaseModel):
+    """Paginated history of risk assessments for a location."""
+
+    total: int
+    items: list[RiskAssessmentContract]
+    pagination: PaginationMeta | None = None
