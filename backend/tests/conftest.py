@@ -9,10 +9,10 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET_KEY", secrets.token_urlsafe(32))
 
 import pytest  # noqa: E402
-from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
+from alembic import command  # noqa: E402
 from app.db.session import create_db_engine, get_session_factory  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
