@@ -1,15 +1,23 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import type { UserRole } from "../../types/auth";
 
 export interface NavItem {
   to: string;
   label: string;
   icon: string;
+  allowedRoles?: UserRole[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Overview", icon: "grid_view" },
   { to: "/map", label: "Risk Map", icon: "explore" },
-  { to: "/field-log", label: "Field Log", icon: "edit_note" },
+  {
+    to: "/field-log",
+    label: "Field Log",
+    icon: "edit_note",
+    allowedRoles: ["admin", "district_operator"],
+  },
   { to: "/warnings", label: "Warnings", icon: "fact_check" },
   { to: "/sources", label: "Sources", icon: "sensors" },
   { to: "/replay", label: "Replay", icon: "history" },
@@ -24,6 +32,11 @@ interface SidebarDockProps {
 /** Fixed left navigation rail on desktop with responsive slide-over drawer on mobile. */
 export function SidebarDock({ isMobileOpen, onCloseMobile }: SidebarDockProps) {
   const { pathname } = useLocation();
+  const { user } = useAuth();
+
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !item.allowedRoles || (user && item.allowedRoles.includes(user.role))
+  );
 
   const isItemActive = (isActive: boolean, to: string) =>
     isActive || (to === "/map" && pathname.startsWith("/locations"));
@@ -35,7 +48,7 @@ export function SidebarDock({ isMobileOpen, onCloseMobile }: SidebarDockProps) {
         className="hidden md:flex fixed left-0 top-16 bottom-0 w-20 bg-surface-card border-r border-border-hairline z-40 flex-col justify-between py-4 items-center"
       >
         <nav className="flex flex-col items-center gap-1.5 w-full px-2">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -75,7 +88,7 @@ export function SidebarDock({ isMobileOpen, onCloseMobile }: SidebarDockProps) {
             aria-label="Mobile navigation"
             className="relative z-50 mt-16 w-64 bg-surface-card border-r border-border-hairline p-4 flex flex-col gap-1.5 shadow-lg"
           >
-            {NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

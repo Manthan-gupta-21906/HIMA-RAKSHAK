@@ -13,12 +13,16 @@ from app.models.location import LocationModel  # noqa: F401
 from app.models.observation import ObservationModel  # noqa: F401
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
 from app.models.source import SourceModel  # noqa: F401
+from app.repositories.location_repository import SqlAlchemyLocationRepository
+from app.repositories.observation_repository import ObservationRepository
 from app.repositories.risk_repository import RiskAssessmentRepository
+from app.repositories.source_repository import SourceRepository
 from app.schemas.common import HazardType, PaginationMeta
 from app.schemas.exposure import LocationExposureProfile, PriorityAssessment
 from app.schemas.risk import (
     LocationRiskState,
     RiskAssessmentContract,
+    RiskAssessmentRequest,
     RiskHistoryResponse,
 )
 from app.services.location_service import LocationNotFoundError
@@ -33,7 +37,36 @@ def _get_db() -> Generator[Session, None, None]:
 
 
 def get_risk_service(db: Session = Depends(_get_db)) -> RiskService:
-    return RiskService(RiskAssessmentRepository(db))
+    return RiskService(
+        risk_repo=RiskAssessmentRepository(db),
+        observation_repo=ObservationRepository(db),
+        location_repo=SqlAlchemyLocationRepository(db),
+        source_repo=SourceRepository(db),
+    )
+
+
+@router.post(
+    "/assess/{location_id}",
+    response_model=LocationRiskState,
+    summary="Run multi-hazard risk assessment for a location",
+)
+def assess_location_risk(
+    location_id: str,
+    payload: RiskAssessmentRequest | None = None,
+    _operator: object = Depends(require_operator),
+    service: RiskService = Depends(get_risk_service),
+) -> LocationRiskState:
+    """Execute independent flood and avalanche assessment pathways and persist results."""
+    try:
+        return service.assess_location_risk(
+            location_id=location_id,
+            cutoff_at=payload.cutoff_at if payload else None,
+        )
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 def get_risk_workflow_service(db: Session = Depends(_get_db)) -> RiskWorkflowService:

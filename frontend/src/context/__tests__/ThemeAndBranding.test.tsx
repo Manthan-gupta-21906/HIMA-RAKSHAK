@@ -8,7 +8,7 @@ const SEEDED_USER = {
   name: "M. Gupta",
   email: "ops.srinagar@jk-ddma.gov.in",
   initials: "MG",
-  role: "operator",
+  role: "district_operator",
   station: "DDMA Control Room",
   district: "Srinagar",
 };
@@ -30,6 +30,7 @@ describe("Theme & Branding (Phase 10)", () => {
 
   it("renders custom logo in TopHeader and switches theme in Profile & Settings", async () => {
     const user = userEvent.setup();
+    localStorage.setItem("hima_rakshak_token", "test-jwt-token");
     localStorage.setItem("hima_rakshak_auth_user", JSON.stringify(SEEDED_USER));
     window.history.pushState({}, "", "/profile");
     render(<App />);

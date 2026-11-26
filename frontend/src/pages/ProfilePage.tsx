@@ -65,7 +65,7 @@ export function ProfilePage() {
           <div className="flex flex-col gap-2.5 text-xs">
             <div className="flex justify-between gap-2">
               <span className="text-text-muted">Assigned Role</span>
-              <Badge tone="neutral">{user?.role ?? "operator"}</Badge>
+              <Badge tone="neutral">{user?.role ?? "viewer"}</Badge>
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-text-muted">Control Station</span>
