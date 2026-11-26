@@ -15,10 +15,13 @@ export interface ReplayFrame {
 
 export interface HistoricalEvent {
   id: string;
+  locationId?: string;
   title: string;
   sector: string;
   hazard: "flood" | "avalanche";
   dateRange: string;
   provenance: string;
+  isPersisted?: boolean;
+  isDemoFixture?: boolean;
   frames: ReplayFrame[];
 }

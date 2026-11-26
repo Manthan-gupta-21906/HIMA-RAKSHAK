@@ -9,8 +9,16 @@ import app.models  # noqa: F401
 from app.auth import require_admin, require_any_authenticated
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
+from app.models.ingestion_run import IngestionRunModel  # noqa: F401
 from app.models.source import SourceModel  # noqa: F401
+from app.repositories.ingestion_run_repository import IngestionRunRepository
 from app.repositories.source_repository import SourceNotFoundError, SourceRepository
+from app.schemas.ingestion import (
+    IngestionHealthSummary,
+    IngestionRunListResponse,
+    IngestionRunRecord,
+    IngestionRunStatus,
+)
 from app.schemas.source import (
     AccessMode,
     SourceContract,
@@ -18,6 +26,7 @@ from app.schemas.source import (
     SourceResponse,
     SourceType,
 )
+from app.services.ingestion_scheduler import IngestionScheduler
 from app.services.source_service import SourceService
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -56,6 +65,29 @@ def list_sources(
         access_mode=access_mode.value if access_mode else None,
     )
     return SourceListResponse(total=len(items), items=items)
+
+
+@router.get("/monitoring/health", response_model=IngestionHealthSummary)
+def get_ingestion_health(
+    _user: object = Depends(require_any_authenticated),
+    db: Session = Depends(_get_db),
+) -> IngestionHealthSummary:
+    """Return source freshness and scheduled ingestion monitoring summary."""
+    return IngestionScheduler.get_monitoring_summary(db)
+
+
+@router.get("/monitoring/runs", response_model=IngestionRunListResponse)
+def list_ingestion_runs(
+    source_id: str | None = Query(None),
+    run_status: IngestionRunStatus | None = Query(None, alias="status"),
+    limit: int = Query(50, ge=1, le=200),
+    _user: object = Depends(require_any_authenticated),
+    db: Session = Depends(_get_db),
+) -> IngestionRunListResponse:
+    """List recent ingestion runs with retry and error telemetry."""
+    repo = IngestionRunRepository(db)
+    items = repo.list_runs(source_id=source_id, status=run_status, limit=limit)
+    return IngestionRunListResponse(total=len(items), items=items)
 
 
 @router.get("/{source_id}", response_model=SourceResponse)
@@ -97,6 +129,27 @@ def record_fetch(
     """Record that data was fetched from this source (admin only)."""
     try:
         return service.record_fetch(source_id)
+    except SourceNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+
+@router.post(
+    "/{source_id}/ingest",
+    response_model=IngestionRunRecord,
+)
+def trigger_source_ingestion(
+    source_id: str,
+    _admin: object = Depends(require_admin),
+    db: Session = Depends(_get_db),
+) -> IngestionRunRecord:
+    """Manually trigger source ingestion with retries and run tracking (admin only)."""
+    scheduler = IngestionScheduler()
+    try:
+        return scheduler.ingest_source_with_retries(
+            db, source_id, trigger_mode="manual"
+        )
     except SourceNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)

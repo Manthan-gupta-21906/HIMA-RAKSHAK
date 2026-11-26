@@ -13,6 +13,7 @@ from app.flood.model import FloodBaselineClassifier
 from app.models.location import LocationRecord
 from app.models.observation import ObservationModel
 from app.repositories.alert_repository import AlertRepository
+from app.repositories.gis_layer_repository import GisLayerRepository
 from app.repositories.location_repository import SqlAlchemyLocationRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.risk_repository import RiskAssessmentRepository
@@ -89,7 +90,9 @@ class RiskWorkflowService:
         self._obs_repo = ObservationRepository(db)
         self._risk_repo = RiskAssessmentRepository(db)
         self._orchestrator = RiskOrchestrator(self._risk_repo)
-        self._exposure_service = SpatialExposureService()
+        self._exposure_service = SpatialExposureService(
+            layer_repo=GisLayerRepository(db)
+        )
         self._alert_service = AlertService(AlertRepository(db))
 
     @staticmethod

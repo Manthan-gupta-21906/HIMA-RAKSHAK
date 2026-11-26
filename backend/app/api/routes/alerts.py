@@ -16,8 +16,10 @@ from app.repositories.alert_repository import AlertRepository
 from app.schemas.alert import (
     AcknowledgeAlertRequest,
     AlertActionRecord,
+    AlertDeliveryListResponse,
     AlertListResponse,
     AlertStatus,
+    DeliverAlertRequest,
     UpdateAlertActionRequest,
 )
 from app.schemas.common import HazardType
@@ -95,6 +97,58 @@ def update_alert_action(
             alert_id=alert_id,
             status=payload.status,
             action_note=payload.action_note,
+        )
+    except AlertNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/{alert_id}/deliver",
+    response_model=AlertActionRecord,
+    summary="Deliver or retry delivery for an operational alert",
+)
+def deliver_alert(
+    alert_id: str,
+    payload: DeliverAlertRequest | None = None,
+    _user: UserModel = Depends(require_operator),
+    service: AlertService = Depends(get_alert_service),
+) -> AlertActionRecord:
+    """Trigger or retry operational alert delivery across configured channels."""
+    try:
+        return service.deliver_alert(
+            alert_id=alert_id,
+            channels=payload.channels if payload else None,
+            webhook_url=payload.webhook_url if payload else None,
+            email_recipients=payload.email_recipients if payload else None,
+        )
+    except AlertNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{alert_id}/deliveries",
+    response_model=AlertDeliveryListResponse,
+    summary="List delivery attempts and status for an alert",
+)
+def list_alert_deliveries(
+    alert_id: str,
+    _user: object = Depends(require_any_authenticated),
+    service: AlertService = Depends(get_alert_service),
+) -> AlertDeliveryListResponse:
+    """Inspect delivery attempts, HTTP response codes, errors, and overall delivery status."""
+    try:
+        overall_status, items = service.list_deliveries(alert_id)
+        return AlertDeliveryListResponse(
+            alert_id=alert_id,
+            delivery_status=overall_status,
+            total=len(items),
+            items=items,
         )
     except AlertNotFoundError as exc:
         raise HTTPException(

@@ -5,7 +5,7 @@ Distinct from OfficialWarningModel (authoritative CWC/DGRE/IMD bulletins).
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -45,6 +45,35 @@ class AlertActionModel(Base):
         DateTime(timezone=True), nullable=True
     )
     is_official_warning: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    delivery_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="pending", index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class AlertDeliveryModel(Base):
+    """Persistent delivery attempt record for an operational alert."""
+
+    __tablename__ = "alert_deliveries"
+
+    delivery_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    alert_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("alerts.alert_id"),
+        nullable=False,
+        index=True,
+    )
+    channel: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    target: Mapped[str] = mapped_column(String(300), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    response_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dispatched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )

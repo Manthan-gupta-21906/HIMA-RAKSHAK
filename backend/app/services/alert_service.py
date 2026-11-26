@@ -4,10 +4,17 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.repositories.alert_repository import AlertRepository
-from app.schemas.alert import AlertActionRecord, AlertStatus
+from app.schemas.alert import (
+    AlertActionRecord,
+    AlertDeliveryRecord,
+    AlertStatus,
+    DeliveryChannel,
+    DeliveryStatus,
+)
 from app.schemas.common import HazardType
 from app.schemas.exposure import PriorityAssessment
 from app.schemas.risk import RiskAssessmentContract
+from app.services.alert_delivery import AlertDeliveryDispatcher
 
 
 class AlertNotFoundError(LookupError):
@@ -15,10 +22,15 @@ class AlertNotFoundError(LookupError):
 
 
 class AlertService:
-    """Generates, persists, and manages operational alerts distinct from official warnings."""
+    """Generates, persists, delivers, and manages operational alerts distinct from official warnings."""
 
-    def __init__(self, repo: AlertRepository) -> None:
+    def __init__(
+        self,
+        repo: AlertRepository,
+        dispatcher: AlertDeliveryDispatcher | None = None,
+    ) -> None:
         self._repo = repo
+        self._dispatcher = dispatcher or AlertDeliveryDispatcher()
 
     @staticmethod
     def _build_recommendation(
@@ -63,10 +75,14 @@ class AlertService:
             recommendation=recommendation,
             explanation=list(priority.explanation),
             status=AlertStatus.ACTIVE,
+            delivery_status=DeliveryStatus.PENDING,
             is_official_warning=False,
             created_at=datetime.now(UTC),
         )
-        return self._repo.create(record)
+        created = self._repo.create(record)
+        deliveries, overall = self._dispatcher.dispatch(created)
+        updated = self._repo.record_deliveries(created.alert_id, deliveries, overall)
+        return updated or created
 
     def list_alerts(
         self,
@@ -115,3 +131,32 @@ class AlertService:
         )
         assert updated is not None
         return updated
+
+    def deliver_alert(
+        self,
+        alert_id: str,
+        *,
+        channels: list[DeliveryChannel] | None = None,
+        webhook_url: str | None = None,
+        email_recipients: list[str] | None = None,
+    ) -> AlertActionRecord:
+        """Dispatch or retry delivery for an existing operational alert."""
+        existing = self._repo.get_by_id(alert_id)
+        if existing is None:
+            raise AlertNotFoundError(f"Alert '{alert_id}' not found.")
+        deliveries, overall = self._dispatcher.dispatch(
+            existing,
+            channels=channels,
+            webhook_url=webhook_url,
+            email_recipients=email_recipients,
+        )
+        updated = self._repo.record_deliveries(alert_id, deliveries, overall)
+        assert updated is not None
+        return updated
+
+    def list_deliveries(self, alert_id: str) -> tuple[DeliveryStatus, list[AlertDeliveryRecord]]:
+        """Return delivery status and delivery attempts for an alert."""
+        existing = self._repo.get_by_id(alert_id)
+        if existing is None:
+            raise AlertNotFoundError(f"Alert '{alert_id}' not found.")
+        return existing.delivery_status, existing.deliveries

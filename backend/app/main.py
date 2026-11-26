@@ -1,6 +1,7 @@
 """FastAPI application entrypoint for HIMA-RAKSHAK."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import HTTPException, RequestValidationError
@@ -9,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.alerts import router as alerts_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.layers import router as layers_router
 from app.api.routes.locations import router as locations_router
 from app.api.routes.observations import router as observations_router
 from app.api.routes.risk import router as risk_router
@@ -16,6 +18,8 @@ from app.api.routes.sources import router as sources_router
 from app.api.routes.warnings import router as warnings_router
 from app.config import Settings, get_settings
 from app.core.errors import ErrorDetail, build_error_envelope
+from app.db.session import create_db_engine, get_session_factory
+from app.services.ingestion_scheduler import IngestionScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +27,23 @@ logger = logging.getLogger(__name__)
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
+    engine = create_db_engine()
+    session_factory = get_session_factory(engine)
+    scheduler = IngestionScheduler(session_factory=session_factory, settings=settings)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        scheduler.start()
+        try:
+            yield
+        finally:
+            await scheduler.stop()
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
         description="Multi-hazard risk intelligence and early-warning decision-support API.",
+        lifespan=lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -109,6 +126,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(locations_router)
+    app.include_router(layers_router)
     app.include_router(sources_router)
     app.include_router(observations_router)
     app.include_router(risk_router)
