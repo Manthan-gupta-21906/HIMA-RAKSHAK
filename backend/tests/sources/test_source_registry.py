@@ -7,6 +7,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
+from app.core.security import create_access_token
 from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
 from app.main import app
@@ -120,12 +121,8 @@ class TestComputeFreshness:
 
 
 def _admin_headers() -> dict[str, str]:
-    """Log in as admin and return Authorization header."""
-    resp = client.post(
-        "/auth/login",
-        json={"username": "Admin", "password": "Admin123"},
-    )
-    token = resp.json()["access_token"]
+    """Return Authorization header for an admin user."""
+    token = create_access_token("admin_user", "admin")
     return {"Authorization": f"Bearer {token}"}
 
 

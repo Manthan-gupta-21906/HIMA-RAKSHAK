@@ -63,7 +63,7 @@ export function HazardEngineCard({
   fieldLogHref,
 }: {
   engine: HazardEngine;
-  fieldLogHref: string;
+  fieldLogHref?: string;
 }) {
   const readinessGate = engine.readiness !== "operational";
 
@@ -158,13 +158,15 @@ export function HazardEngineCard({
           </span>
         </div>
 
-        <Link
-          to={fieldLogHref}
-          className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full bg-surface-container-low border border-border-hairline hover:bg-surface-container text-[11px] font-semibold text-text-primary transition-colors"
-        >
-          <span>{engine.actionLabel}</span>
-          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-        </Link>
+        {fieldLogHref ? (
+          <Link
+            to={fieldLogHref}
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full bg-surface-container-low border border-border-hairline hover:bg-surface-container text-[11px] font-semibold text-text-primary transition-colors"
+          >
+            <span>{engine.actionLabel}</span>
+            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          </Link>
+        ) : null}
       </footer>
     </article>
   );

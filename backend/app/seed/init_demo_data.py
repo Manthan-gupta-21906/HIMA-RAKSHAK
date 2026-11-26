@@ -10,12 +10,10 @@ Seeds:
 
 import logging
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
-from app.db.base import Base
+from app.api.routes.auth import seed_demo_users
 from app.db.session import create_db_engine, get_session_factory
 from app.ingestion.warning_import import (
     import_warning_record,
@@ -25,7 +23,6 @@ from app.models.location import LocationModel
 from app.models.observation import ObservationModel
 from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
 from app.models.source import SourceModel
-from app.models.user import UserModel, UserRole
 from app.repositories.risk_repository import RiskAssessmentRepository
 from app.schemas.common import (
     FreshnessStatus,
@@ -38,47 +35,6 @@ from app.schemas.risk import RiskAssessmentContract
 from app.seed.locations import PILOT_LOCATIONS
 
 logger = logging.getLogger(__name__)
-
-
-def seed_demo_users(db: Session) -> int:
-    """Ensure standard demo users exist for testing and demo flows."""
-    demo_users = [
-        ("Admin", "Admin123", "Demo Admin", UserRole.ADMIN),
-        ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
-        ("viewer", "viewer1234", "Demo Viewer", UserRole.VIEWER),
-    ]
-    inserted = 0
-    legacy_admin = (
-        db.query(UserModel)
-        .filter(UserModel.username == "admin", UserModel.is_demo_fixture.is_(True))
-        .first()
-    )
-    if legacy_admin is not None:
-        existing_upper = db.query(UserModel).filter(UserModel.username == "Admin").first()
-        if existing_upper is None:
-            legacy_admin.username = "Admin"
-            legacy_admin.hashed_password = hash_password("Admin123")
-            inserted += 1
-        else:
-            db.delete(legacy_admin)
-        db.flush()
-
-    for username, password, full_name, role in demo_users:
-        user = db.query(UserModel).filter(UserModel.username == username).first()
-        if user is None:
-            db.add(
-                UserModel(
-                    user_id=str(uuid4()),
-                    username=username,
-                    hashed_password=hash_password(password),
-                    full_name=full_name,
-                    role=role,
-                    is_demo_fixture=True,
-                )
-            )
-            inserted += 1
-    db.flush()
-    return inserted
 
 
 def seed_pilot_locations(db: Session) -> int:
@@ -133,7 +89,7 @@ def seed_sources(db: Session) -> int:
             "provider": "HIMA-RAKSHAK Field Observers",
             "dataset": "field_observations",
             "source_type": "field_observation",
-            "access_mode": "manual",
+            "access_mode": "sample",
             "licence": "Internal System Licence",
             "reference_url": "https://himarakshak.local/",
             "update_frequency_minutes": 60,
