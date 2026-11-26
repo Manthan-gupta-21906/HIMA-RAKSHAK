@@ -26,13 +26,24 @@ def _get_db() -> Session:
 
 
 def seed_demo_users(db: Session) -> int:
-    """Explicitly seed or sync demo users only in development/test environments."""
-    if get_settings().app_env.lower() not in {"development", "test"}:
+    """Explicitly seed demo users from environment variables in development/test only."""
+    settings = get_settings()
+    if settings.app_env.lower() not in {"development", "test"}:
         return 0
     demo_users = [
-        ("Admin", "Admin123", "Demo Admin", UserRole.ADMIN),
-        ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
-        ("viewer", "viewer1234", "Demo Viewer", UserRole.VIEWER),
+        (settings.demo_admin_username, settings.demo_admin_password, "Demo Admin", UserRole.ADMIN),
+        (
+            settings.demo_operator_username,
+            settings.demo_operator_password,
+            "Demo Operator",
+            UserRole.DISTRICT_OPERATOR,
+        ),
+        (
+            settings.demo_viewer_username,
+            settings.demo_viewer_password,
+            "Demo Viewer",
+            UserRole.VIEWER,
+        ),
     ]
     changed = 0
     # Rename legacy lowercase 'admin' demo fixture if present
@@ -42,16 +53,20 @@ def seed_demo_users(db: Session) -> int:
         .first()
     )
     if legacy_admin is not None:
-        existing_upper = db.query(UserModel).filter(UserModel.username == "Admin").first()
-        if existing_upper is None:
-            legacy_admin.username = "Admin"
-            legacy_admin.hashed_password = hash_password("Admin123")
+        target_admin = settings.demo_admin_username
+        existing_target = db.query(UserModel).filter(UserModel.username == target_admin).first()
+        if existing_target is None:
+            legacy_admin.username = target_admin
+            if settings.demo_admin_password:
+                legacy_admin.hashed_password = hash_password(settings.demo_admin_password)
             changed += 1
         else:
             db.delete(legacy_admin)
         db.flush()
 
     for username, password, full_name, role in demo_users:
+        if not password:
+            continue
         existing_user = db.query(UserModel).filter(UserModel.username == username).first()
         if existing_user is None:
             db.add(

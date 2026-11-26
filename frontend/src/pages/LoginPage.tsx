@@ -2,18 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import type { UserRole } from "../types/auth";
 
 interface FormErrors {
   email?: string;
   password?: string;
 }
-
-const ROLE_OPTIONS: { value: UserRole; label: string; hint: string }[] = [
-  { value: "operator", label: "DDMA Operator", hint: "Full control-room triage & replay" },
-  { value: "field_officer", label: "SDRF Field Officer", hint: "Field log & telemetry override" },
-  { value: "viewer", label: "SDMA Viewer", hint: "Read-only advisory monitoring" },
-];
 
 function validateLogin(username: string, password: string): FormErrors {
   const errors: FormErrors = {};
@@ -37,7 +30,6 @@ export function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("operator");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -52,19 +44,13 @@ export function LoginPage() {
     setIsSubmitting(true);
     setApiError(null);
     try {
-      await login({ email, password, role });
+      await login({ email, password });
       navigate("/", { replace: true });
     } catch (err) {
       setApiError((err as Error).message || "Authentication failed. Check credentials.");
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const fillDemoCredentials = () => {
-    setEmail("Admin");
-    setPassword("Admin123");
-    setErrors({});
   };
 
   return (
@@ -112,7 +98,7 @@ export function LoginPage() {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Admin"
+                placeholder="Enter username or official email"
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? "login-email-error" : undefined}
                 className={`h-11 px-4 rounded-full bg-surface-container-lowest border text-sm text-text-primary focus:outline-none transition-all ${
@@ -166,41 +152,11 @@ export function LoginPage() {
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-text-primary">Operational Role</span>
-              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-surface-container-low border border-border-hairline">
-                {ROLE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setRole(opt.value)}
-                    title={opt.hint}
-                    className={`py-2 px-2 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                      role === opt.value
-                        ? "bg-primary-container text-on-primary shadow-xs"
-                        : "text-on-surface-variant hover:text-text-primary"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="flex flex-col gap-3 pt-2">
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 <span className="material-symbols-outlined text-[16px]">login</span>
                 <span>{isSubmitting ? "Signing in..." : "Sign In"}</span>
               </Button>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={fillDemoCredentials}
-                  className="text-xs font-semibold text-on-surface-variant hover:text-text-primary underline underline-offset-4 cursor-pointer"
-                >
-                  Use Demo Credentials
-                </button>
-              </div>
             </div>
           </form>
         </div>

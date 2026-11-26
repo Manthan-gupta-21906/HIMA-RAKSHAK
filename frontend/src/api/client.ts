@@ -6,6 +6,7 @@
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export const TOKEN_STORAGE_KEY = "hima_rakshak_token";
+export const AUTH_EXPIRED_EVENT = "hima:auth-expired";
 
 export function getStoredToken(): string | null {
   return sessionStorage.getItem(TOKEN_STORAGE_KEY) ?? localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -110,6 +111,9 @@ export async function apiClient<T>(
 
     if (response.status === 401) {
       clearToken();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+      }
     }
 
     throw new ApiError(response.status, errorMessage, errorCode, errorDetails);
