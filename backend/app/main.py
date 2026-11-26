@@ -2,6 +2,7 @@
 
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes.auth import router as auth_router
@@ -21,6 +22,13 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         description="Multi-hazard risk intelligence and early-warning decision-support API.",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     @app.exception_handler(HTTPException)
