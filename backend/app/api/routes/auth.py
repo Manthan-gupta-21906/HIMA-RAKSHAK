@@ -42,10 +42,14 @@ def seed_demo_users(db: Session) -> int:
         .first()
     )
     if legacy_admin is not None:
-        legacy_admin.username = "Admin"
-        legacy_admin.hashed_password = hash_password("Admin123")
+        existing_upper = db.query(UserModel).filter(UserModel.username == "Admin").first()
+        if existing_upper is None:
+            legacy_admin.username = "Admin"
+            legacy_admin.hashed_password = hash_password("Admin123")
+            changed += 1
+        else:
+            db.delete(legacy_admin)
         db.flush()
-        changed += 1
 
     for username, password, full_name, role in demo_users:
         existing_user = db.query(UserModel).filter(UserModel.username == username).first()

@@ -15,12 +15,26 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.db.base import Base
 from app.db.session import create_db_engine, get_session_factory
-from app.ingestion.warning_import import import_sample_fixtures
+from app.ingestion.warning_import import (
+    import_warning_record,
+    load_sample_warning_fixtures,
+)
 from app.models.location import LocationModel
 from app.models.observation import ObservationModel
+from app.models.risk_assessment import RiskAssessmentModel  # noqa: F401
 from app.models.source import SourceModel
 from app.models.user import UserModel, UserRole
+from app.repositories.risk_repository import RiskAssessmentRepository
+from app.schemas.common import (
+    FreshnessStatus,
+    HazardType,
+    PredictionStatus,
+    ProvenanceMeta,
+    RiskClass,
+)
+from app.schemas.risk import RiskAssessmentContract
 from app.seed.locations import PILOT_LOCATIONS
 
 logger = logging.getLogger(__name__)
@@ -29,11 +43,26 @@ logger = logging.getLogger(__name__)
 def seed_demo_users(db: Session) -> int:
     """Ensure standard demo users exist for testing and demo flows."""
     demo_users = [
-        ("admin", "admin1234", "Demo Admin", UserRole.ADMIN),
+        ("Admin", "Admin123", "Demo Admin", UserRole.ADMIN),
         ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
         ("viewer", "viewer1234", "Demo Viewer", UserRole.VIEWER),
     ]
     inserted = 0
+    legacy_admin = (
+        db.query(UserModel)
+        .filter(UserModel.username == "admin", UserModel.is_demo_fixture.is_(True))
+        .first()
+    )
+    if legacy_admin is not None:
+        existing_upper = db.query(UserModel).filter(UserModel.username == "Admin").first()
+        if existing_upper is None:
+            legacy_admin.username = "Admin"
+            legacy_admin.hashed_password = hash_password("Admin123")
+            inserted += 1
+        else:
+            db.delete(legacy_admin)
+        db.flush()
+
     for username, password, full_name, role in demo_users:
         user = db.query(UserModel).filter(UserModel.username == username).first()
         if user is None:
@@ -243,13 +272,136 @@ def seed_demo_observations(db: Session) -> int:
     return inserted
 
 
+def seed_demo_risk_assessments(db: Session) -> int:
+    """Seed baseline hazard assessments for pilot locations keeping flood and avalanche distinct."""
+    repo = RiskAssessmentRepository(db)
+    now = datetime.now(UTC)
+
+    cwc_meta = ProvenanceMeta(
+        source_id="src-cwc-01",
+        source_name="Central Water Commission Telemetry",
+        licence="Government Open Data Licence - India (GODL)",
+        is_demo_fixture=True,
+        ingested_at=now,
+    )
+    dgre_meta = ProvenanceMeta(
+        source_id="src-dgre-01",
+        source_name="DGRE Snow & Avalanche Telemetry",
+        licence="Government Open Data Licence - India (GODL)",
+        is_demo_fixture=True,
+        ingested_at=now,
+    )
+    imd_meta = ProvenanceMeta(
+        source_id="src-imd-01",
+        source_name="IMD Automated Weather Station",
+        licence="Government Open Data Licence - India (GODL)",
+        is_demo_fixture=True,
+        ingested_at=now,
+    )
+
+    contracts = [
+        RiskAssessmentContract(
+            risk_id="risk-demo-flood-sgr-01",
+            location_id="JK-SGR-01",
+            hazard_type=HazardType.FLOOD,
+            risk_class=RiskClass.MODERATE,
+            score=0.62,
+            confidence=0.82,
+            lead_time_hours=24,
+            freshness=FreshnessStatus.FRESH,
+            prediction_status=PredictionStatus.READY,
+            readiness_reason=None,
+            assessed_at=now - timedelta(minutes=15),
+            model_version="flood-baseline-v1",
+            provenance=cwc_meta,
+        ),
+        RiskAssessmentContract(
+            risk_id="risk-demo-avalanche-gul-01",
+            location_id="JK-GUL-01",
+            hazard_type=HazardType.AVALANCHE,
+            risk_class=RiskClass.MODERATE,
+            score=0.50,
+            confidence=0.30,
+            lead_time_hours=12,
+            freshness=FreshnessStatus.FRESH,
+            prediction_status=PredictionStatus.INDICATIVE,
+            readiness_reason="Indicative terrain + weather screening; snowpack labels sparse.",
+            assessed_at=now - timedelta(minutes=20),
+            model_version="readiness-gated-v1",
+            provenance=dgre_meta,
+        ),
+        RiskAssessmentContract(
+            risk_id="risk-demo-flood-ban-01",
+            location_id="JK-BAN-01",
+            hazard_type=HazardType.FLOOD,
+            risk_class=RiskClass.MODERATE,
+            score=0.48,
+            confidence=0.65,
+            lead_time_hours=24,
+            freshness=FreshnessStatus.STALE,
+            prediction_status=PredictionStatus.STALE,
+            readiness_reason="Cached telemetry; awaiting fresh IMD rainfall feed.",
+            assessed_at=now - timedelta(hours=2),
+            model_version="flood-baseline-v1",
+            provenance=imd_meta,
+        ),
+        RiskAssessmentContract(
+            risk_id="risk-demo-avalanche-ban-01",
+            location_id="JK-BAN-01",
+            hazard_type=HazardType.AVALANCHE,
+            risk_class=RiskClass.MODERATE,
+            score=0.50,
+            confidence=0.30,
+            lead_time_hours=12,
+            freshness=FreshnessStatus.STALE,
+            prediction_status=PredictionStatus.INDICATIVE,
+            readiness_reason="Indicative screening only; insufficient historical avalanche labels.",
+            assessed_at=now - timedelta(hours=2),
+            model_version="readiness-gated-v1",
+            provenance=dgre_meta,
+        ),
+        RiskAssessmentContract(
+            risk_id="risk-demo-avalanche-drs-01",
+            location_id="JK-DRS-01",
+            hazard_type=HazardType.AVALANCHE,
+            risk_class=RiskClass.UNSUPPORTED,
+            score=None,
+            confidence=0.0,
+            lead_time_hours=12,
+            freshness=FreshnessStatus.UNKNOWN,
+            prediction_status=PredictionStatus.UNSUPPORTED,
+            readiness_reason="Unsupported: insufficient local sensor and snowpack coverage.",
+            assessed_at=now - timedelta(hours=1),
+            model_version=None,
+            provenance=dgre_meta,
+        ),
+    ]
+
+    inserted = 0
+    for contract in contracts:
+        existing = repo.get_latest_for_location_and_hazard(
+            contract.location_id, contract.hazard_type
+        )
+        if existing is None:
+            repo.save(contract)
+            inserted += 1
+    db.flush()
+    return inserted
+
+
 def seed_all_demo_data(db: Session) -> dict[str, int]:
     """Execute all seeders in order within a single transaction."""
     users = seed_demo_users(db)
     locations = seed_pilot_locations(db)
     sources = seed_sources(db)
     observations = seed_demo_observations(db)
-    warnings = len(import_sample_fixtures(db))
+    warnings = 0
+    for fixture in load_sample_warning_fixtures():
+        if db.get(LocationModel, fixture.location_id) is None:
+            fixture = fixture.model_copy(update={"location_id": "JK-SGR-01"})
+        import_warning_record(db, fixture)
+        warnings += 1
+    risk_assessments = seed_demo_risk_assessments(db)
     db.commit()
     return {
         "users": users,
@@ -257,6 +409,7 @@ def seed_all_demo_data(db: Session) -> dict[str, int]:
         "sources": sources,
         "observations": observations,
         "warnings": warnings,
+        "risk_assessments": risk_assessments,
     }
 
 
@@ -264,6 +417,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     logger.info("Initializing database with demo data...")
     engine = create_db_engine()
+    Base.metadata.create_all(bind=engine)
     factory = get_session_factory(engine)
     with factory() as db:
         results = seed_all_demo_data(db)
