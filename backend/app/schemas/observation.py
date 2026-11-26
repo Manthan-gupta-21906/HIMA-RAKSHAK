@@ -4,7 +4,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.schemas.common import AwareDatetime
+from app.schemas.common import AwareDatetime, PaginationMeta
 
 
 class ObservationMetric(StrEnum):
@@ -45,3 +45,11 @@ class ObservationContract(BaseModel):
             msg = f"Invalid unit '{self.unit}' for '{self.metric.value}'; expected '{expected}'."
             raise ValueError(msg)
         return self
+
+
+class ObservationListResponse(BaseModel):
+    """Paginated list of environmental observations."""
+
+    total: int
+    items: list[ObservationContract]
+    pagination: PaginationMeta | None = None

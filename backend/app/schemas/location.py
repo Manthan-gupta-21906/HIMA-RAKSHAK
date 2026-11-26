@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 
 from app.models.location import CoverageStatus, HazardType
+from app.schemas.common import PaginationMeta
 
 
 class LocationOut(BaseModel):
@@ -26,6 +27,7 @@ class LocationListResponse(BaseModel):
 
     total: int
     items: list[LocationOut]
+    pagination: PaginationMeta | None = None
 
 
 class LocationCreate(BaseModel):
