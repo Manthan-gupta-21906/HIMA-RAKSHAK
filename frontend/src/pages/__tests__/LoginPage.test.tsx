@@ -15,19 +15,19 @@ describe("LoginPage", () => {
 
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(screen.getByText(/official email address is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/username or official email is required/i)).toBeInTheDocument();
     expect(screen.getByText(/password is required/i)).toBeInTheDocument();
   });
 
-  it("validates email format and minimum password length", async () => {
+  it("validates username length and minimum password length", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/official email/i), "not-an-email");
+    await user.type(screen.getByLabelText(/username or email/i), "ab");
     await user.type(screen.getByLabelText(/^password$/i), "123");
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(screen.getByText(/enter a valid email address/i)).toBeInTheDocument();
+    expect(screen.getByText(/enter a valid username or email/i)).toBeInTheDocument();
     expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
   });
 

@@ -26,30 +26,49 @@ def _get_db() -> Session:
 
 
 def seed_demo_users(db: Session) -> int:
-    """Explicitly seed demo users only in development/test environments."""
+    """Explicitly seed or sync demo users only in development/test environments."""
     if get_settings().app_env.lower() not in {"development", "test"}:
         return 0
-    existing = db.query(UserModel).count()
-    if existing > 0:
-        return 0
     demo_users = [
-        ("admin", "admin1234", "Demo Admin", UserRole.ADMIN),
+        ("Admin", "Admin123", "Demo Admin", UserRole.ADMIN),
         ("operator", "operator1234", "Demo Operator", UserRole.DISTRICT_OPERATOR),
         ("viewer", "viewer1234", "Demo Viewer", UserRole.VIEWER),
     ]
+    changed = 0
+    # Rename legacy lowercase 'admin' demo fixture if present
+    legacy_admin = (
+        db.query(UserModel)
+        .filter(UserModel.username == "admin", UserModel.is_demo_fixture.is_(True))
+        .first()
+    )
+    if legacy_admin is not None:
+        legacy_admin.username = "Admin"
+        legacy_admin.hashed_password = hash_password("Admin123")
+        db.flush()
+        changed += 1
+
     for username, password, full_name, role in demo_users:
-        db.add(
-            UserModel(
-                user_id=str(uuid4()),
-                username=username,
-                hashed_password=hash_password(password),
-                full_name=full_name,
-                role=role,
-                is_demo_fixture=True,
+        existing_user = db.query(UserModel).filter(UserModel.username == username).first()
+        if existing_user is None:
+            db.add(
+                UserModel(
+                    user_id=str(uuid4()),
+                    username=username,
+                    hashed_password=hash_password(password),
+                    full_name=full_name,
+                    role=role,
+                    is_demo_fixture=True,
+                )
             )
-        )
-    db.commit()
-    return len(demo_users)
+            changed += 1
+        elif existing_user.is_demo_fixture and not verify_password(
+            password, existing_user.hashed_password
+        ):
+            existing_user.hashed_password = hash_password(password)
+            changed += 1
+    if changed > 0:
+        db.commit()
+    return changed
 
 
 def _seed_dev_demo_users_on_startup() -> None:

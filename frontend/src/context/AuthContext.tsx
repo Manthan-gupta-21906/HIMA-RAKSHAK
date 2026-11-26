@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(loadStoredUser);
 
   const login = async ({ email, password, role }: LoginCredentials): Promise<void> => {
-    const username = email.includes("@") ? email.split("@")[0].trim().toLowerCase() : email.trim().toLowerCase();
+    const username = email.includes("@") ? email.split("@")[0].trim() : email.trim();
     
     try {
       // Connect to real backend JWT authentication endpoint
