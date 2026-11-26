@@ -9,6 +9,8 @@ import {
 } from "../client";
 
 describe("apiClient and Token Management", () => {
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
@@ -16,6 +18,7 @@ describe("apiClient and Token Management", () => {
   });
 
   afterEach(() => {
+    globalThis.fetch = originalFetch;
     sessionStorage.clear();
     localStorage.clear();
   });
