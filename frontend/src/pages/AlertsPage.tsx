@@ -54,6 +54,7 @@ export function AlertsPage() {
   const canAct = user?.role === "admin" || user?.role === "district_operator";
 
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [allAlerts, setAllAlerts] = useState<AlertRecord[]>([]);
   const [locationNames, setLocationNames] = useState<Record<string, string>>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [hazardFilter, setHazardFilter] = useState<HazardFilter>("all");
@@ -73,11 +74,9 @@ export function AlertsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetchAlerts({
-        status: statusFilter === "all" ? undefined : statusFilter,
-        hazard_type: hazardFilter === "all" ? undefined : hazardFilter,
-      });
-      setAlerts(response.items);
+      const response = await fetchAlerts();
+      setAllAlerts(response.items);
+      setAlerts(applyFilters(response.items));
       setIsLive(true);
       setSelectedId((prev) =>
         response.items.some((alert) => alert.alert_id === prev)
@@ -85,6 +84,7 @@ export function AlertsPage() {
           : (response.items[0]?.alert_id ?? "")
       );
     } catch (err) {
+      setAllAlerts([]);
       setAlerts([]);
       setIsLive(false);
       setError(
@@ -93,11 +93,27 @@ export function AlertsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, hazardFilter]);
+  }, []);
+
+  const applyFilters = useCallback(
+    (items: AlertRecord[]): AlertRecord[] => {
+      return items.filter((alert) => {
+        if (statusFilter !== "all" && alert.status !== statusFilter) return false;
+        if (hazardFilter !== "all" && alert.hazard_type !== hazardFilter)
+          return false;
+        return true;
+      });
+    },
+    [statusFilter, hazardFilter]
+  );
 
   useEffect(() => {
     void loadAlerts();
   }, [loadAlerts]);
+
+  useEffect(() => {
+    setAlerts(applyFilters(allAlerts));
+  }, [applyFilters, allAlerts]);
 
   useEffect(() => {
     let isMounted = true;
@@ -168,10 +184,13 @@ export function AlertsPage() {
   };
 
   const counts = {
-    active: alerts.filter((alert) => alert.status === "active").length,
-    acknowledged: alerts.filter((alert) => alert.status === "acknowledged").length,
-    in_progress: alerts.filter((alert) => alert.status === "in_progress").length,
-    resolved: alerts.filter((alert) => alert.status === "resolved").length,
+    active: allAlerts.filter((alert) => alert.status === "active").length,
+    acknowledged: allAlerts.filter(
+      (alert) => alert.status === "acknowledged"
+    ).length,
+    in_progress: allAlerts.filter((alert) => alert.status === "in_progress")
+      .length,
+    resolved: allAlerts.filter((alert) => alert.status === "resolved").length,
   };
 
   return (

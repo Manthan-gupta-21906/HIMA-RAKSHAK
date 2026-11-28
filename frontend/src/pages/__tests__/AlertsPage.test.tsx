@@ -53,6 +53,36 @@ const ACTIVE_ALERT: AlertRecord = {
   created_at: "2026-11-28T10:00:00Z",
 };
 
+const MIXED_ALERTS: AlertRecord[] = [
+  {
+    ...ACTIVE_ALERT,
+    alert_id: "alert-flood-1",
+    status: "active",
+    hazard_type: "flood",
+  },
+  {
+    ...ACTIVE_ALERT,
+    alert_id: "alert-avalanche-2",
+    status: "acknowledged",
+    hazard_type: "avalanche",
+    title: "HIGH Avalanche Alert — JK-GUL-01",
+  },
+  {
+    ...ACTIVE_ALERT,
+    alert_id: "alert-flood-3",
+    status: "in_progress",
+    hazard_type: "flood",
+    title: "MEDIUM Flood Alert — JK-SGR-01",
+  },
+  {
+    ...ACTIVE_ALERT,
+    alert_id: "alert-avalanche-4",
+    status: "resolved",
+    hazard_type: "avalanche",
+    title: "LOW Avalanche Alert — JK-GUL-01",
+  },
+];
+
 function seedSession(role: "admin" | "district_operator" | "viewer") {
   localStorage.clear();
   localStorage.setItem("hima_rakshak_token", "test-jwt-token");
@@ -179,5 +209,88 @@ describe("AlertsPage", () => {
       /Backend \/alerts API unavailable/i
     );
     expect(screen.getByText(/No alerts can be displayed/i)).toBeInTheDocument();
+  });
+
+  it("displays all status counters correctly from the full dataset", async () => {
+    vi.mocked(fetchAlerts).mockResolvedValue({
+      total: 4,
+      items: MIXED_ALERTS,
+    });
+    seedSession("district_operator");
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Operational Alerts" });
+
+    // Global counters should reflect all 4 alerts (one per status)
+    const kpiCards = screen.getAllByText("1");
+    expect(kpiCards).toHaveLength(4);
+  });
+
+  it("keeps global counters unchanged when selecting Active filter", async () => {
+    vi.mocked(fetchAlerts).mockResolvedValue({
+      total: 4,
+      items: MIXED_ALERTS,
+    });
+    const user = userEvent.setup();
+    seedSession("district_operator");
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Operational Alerts" });
+
+    // Click the Active filter button
+    await user.click(screen.getByRole("button", { name: /Active$/ }));
+
+    // Only the active alert should be displayed in the list (1 alert card)
+    const alertCards = screen.getAllByRole("button", { name: /HIGH Flood Alert — JK-SGR-01/ });
+    expect(alertCards).toHaveLength(1);
+
+    // Global counters should still reflect all 4 alerts
+    const kpiCards = screen.getAllByText("1");
+    expect(kpiCards).toHaveLength(4);
+  });
+
+  it("keeps global counters unchanged when selecting Acknowledged filter", async () => {
+    vi.mocked(fetchAlerts).mockResolvedValue({
+      total: 4,
+      items: MIXED_ALERTS,
+    });
+    const user = userEvent.setup();
+    seedSession("district_operator");
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Operational Alerts" });
+
+    // Click the Acknowledged filter button
+    await user.click(screen.getByRole("button", { name: /Acknowledged$/ }));
+
+    // Only the acknowledged alert should be displayed in the list
+    const alertCards = screen.getAllByRole("button", { name: /HIGH Avalanche Alert — JK-GUL-01/ });
+    expect(alertCards).toHaveLength(1);
+
+    // Global counters should still reflect all 4 alerts
+    const kpiCards = screen.getAllByText("1");
+    expect(kpiCards).toHaveLength(4);
+  });
+
+  it("hazard filtering does not alter global status counters", async () => {
+    vi.mocked(fetchAlerts).mockResolvedValue({
+      total: 4,
+      items: MIXED_ALERTS,
+    });
+    const user = userEvent.setup();
+    seedSession("district_operator");
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "Operational Alerts" });
+
+    // Select Flood hazard filter
+    await user.selectOptions(screen.getByLabelText(/Filter alerts by hazard/i), "flood");
+
+    // Only flood alerts should be displayed (2 flood alerts)
+    expect(screen.getAllByText(/Priority score:/).length).toBe(2);
+
+    // Global counters should still reflect all 4 alerts across both hazards
+    const kpiCards = screen.getAllByText("1");
+    expect(kpiCards).toHaveLength(4);
   });
 });
