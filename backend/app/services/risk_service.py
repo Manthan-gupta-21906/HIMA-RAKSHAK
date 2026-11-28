@@ -246,18 +246,28 @@ class RiskService:
         # Reverse to chronological order (oldest first) for playback.
         all_items.reverse()
 
-        # Group by hazard pathway so flood and avalanche stay separate.
-        by_hazard: dict[HazardType, list[RiskAssessmentContract]] = {}
+        # Group by (location_id, hazard_type) so each location gets its own
+        # flood and avalanche events. Frames from different locations are
+        # never mixed.
+        by_location_and_hazard: dict[tuple[str | None, HazardType], list[RiskAssessmentContract]] = {}
         for item in all_items:
-            by_hazard.setdefault(item.hazard_type, []).append(item)
+            key = (item.location_id, item.hazard_type)
+            by_location_and_hazard.setdefault(key, []).append(item)
 
         events: list[ReplayEventContract] = []
-        location_display = location_id or "all"
-        sector_name = location.admin_unit if location else "All Locations"
-        is_demo = location.is_demo_fixture if location else False
-        for ht, assessments in sorted(by_hazard.items(), key=lambda kv: kv[0].value):
+        for (loc_id, ht), assessments in sorted(
+            by_location_and_hazard.items(), key=lambda kv: (kv[0][0] or "", kv[0][1].value)
+        ):
             if not assessments:
                 continue
+
+            location = None
+            if loc_id is not None:
+                location = self._location_repo.get_by_id(loc_id)
+            location_display = loc_id or "all"
+            sector_name = location.admin_unit if location else "All Locations"
+            is_demo = location.is_demo_fixture if location else False
+
             event_id = f"replay-{location_display}-{ht.value}"
             title = f"{ht.value.title()} Risk History — {location_display}"
             date_range = (

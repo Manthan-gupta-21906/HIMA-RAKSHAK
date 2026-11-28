@@ -53,6 +53,21 @@ def _replay_test_db(tmp_path: Path) -> Generator[Session, None, None]:
     )
     session.add(loc)
 
+    loc2 = LocationModel(
+        location_id="JK-GUL-01",
+        name="Gulmarg — Affarwat Ridge",
+        admin_unit="Baramulla District, J&K",
+        latitude=34.0484,
+        longitude=74.3805,
+        geom={"type": "Point", "coordinates": [74.3805, 34.0484]},
+        supported_hazards=["flood", "avalanche"],
+        coverage_status="partial",
+        coverage_note="Avalanche-prone ridge",
+        is_demo_fixture=True,
+        provenance="demo_fixture:test",
+    )
+    session.add(loc2)
+
     src = SourceModel(
         source_id="src-cwc-01",
         source_name="Central Water Commission",
@@ -117,6 +132,45 @@ def _replay_test_db(tmp_path: Path) -> Generator[Session, None, None]:
                 provenance=provenance,
             )
         )
+
+    # 2 flood assessments for JK-GUL-01
+    for i in range(2):
+        repo.save(
+            RiskAssessmentContract(
+                risk_id=f"risk-flood-gul-{i}",
+                location_id="JK-GUL-01",
+                hazard_type=HazardType.FLOOD,
+                risk_class=RiskClass.MODERATE if i == 0 else RiskClass.HIGH,
+                score=0.55 if i == 0 else 0.85,
+                confidence=0.80,
+                lead_time_hours=24,
+                freshness=FreshnessStatus.FRESH,
+                prediction_status=PredictionStatus.READY,
+                readiness_reason=None,
+                assessed_at=now - timedelta(hours=i * 8),
+                model_version="flood-baseline-v1",
+                provenance=provenance,
+            )
+        )
+
+    # 1 avalanche assessment for JK-GUL-01
+    repo.save(
+        RiskAssessmentContract(
+            risk_id="risk-aval-gul-0",
+            location_id="JK-GUL-01",
+            hazard_type=HazardType.AVALANCHE,
+            risk_class=RiskClass.HIGH,
+            score=0.90,
+            confidence=0.85,
+            lead_time_hours=48,
+            freshness=FreshnessStatus.FRESH,
+            prediction_status=PredictionStatus.READY,
+            readiness_reason=None,
+            assessed_at=now - timedelta(hours=24),
+            model_version="aval-gated-v1",
+            provenance=provenance,
+        )
+    )
     session.commit()
 
     def _override_get_db() -> Generator[Session, None, None]:
@@ -217,8 +271,10 @@ def test_replay_without_location_id() -> None:
     assert res.status_code == 200
 
     data = res.json()
-    assert data["total"] == 2
-    assert len(data["items"]) == 2
+    # JK-SGR-01: flood + avalanche = 2 events
+    # JK-GUL-01: flood + avalanche = 2 events
+    assert data["total"] == 4
+    assert len(data["items"]) == 4
 
 
 def test_replay_with_invalid_location_id_returns_404() -> None:
@@ -271,3 +327,77 @@ def test_replay_hazard_and_location_filters_combined() -> None:
     assert data["total"] == 1
     assert data["items"][0]["hazard"] == "flood"
     assert len(data["items"][0]["frames"]) == 4
+
+
+def test_replay_without_location_groups_by_location() -> None:
+    """Replay without a location filter returns one event per location+hazard."""
+    res = client.get("/risk/replay", headers=_headers("viewer"))
+    assert res.status_code == 200
+
+    data = res.json()
+    # JK-SGR-01: flood + avalanche = 2 events
+    # JK-GUL-01: flood + avalanche = 2 events
+    assert data["total"] == 4
+    assert len(data["items"]) == 4
+
+    # Each event should contain frames from only one location
+    for event in data["items"]:
+        event_loc = event["location_id"]
+        event_hazard = event["hazard"]
+        for frame in event["frames"]:
+            # The frame's timestamp belongs to an assessment for this location+hazard
+            pass  # Frames don't carry location_id, but we verify via event-level fields
+
+        if event_loc == "JK-SGR-01":
+            assert event["sector"] == "Srinagar District, J&K"
+            assert event["is_demo_fixture"] is True
+        elif event_loc == "JK-GUL-01":
+            assert event["sector"] == "Baramulla District, J&K"
+            assert event["is_demo_fixture"] is True
+
+
+def test_replay_no_event_mixes_locations() -> None:
+    """Assert that no replay event contains frames from another location."""
+    res = client.get("/risk/replay", headers=_headers("viewer"))
+    assert res.status_code == 200
+
+    data = res.json()
+
+    # Build expected frame counts per location+hazard
+    expected = {
+        ("JK-SGR-01", "flood"): 4,
+        ("JK-SGR-01", "avalanche"): 2,
+        ("JK-GUL-01", "flood"): 2,
+        ("JK-GUL-01", "avalanche"): 1,
+    }
+
+    found: dict[tuple[str, str], int] = {}
+    for event in data["items"]:
+        key = (event["location_id"], event["hazard"])
+        found[key] = len(event["frames"])
+        # No frame from another location should appear here
+        assert key in expected, f"Unexpected event: {key}"
+
+    assert found == expected
+
+
+def test_replay_per_location_sector_and_provenance() -> None:
+    """Each replay event returns its location's sector and demo-fixture flag."""
+    res = client.get("/risk/replay", headers=_headers("viewer"))
+    assert res.status_code == 200
+
+    data = res.json()
+
+    sgr_events = [e for e in data["items"] if e["location_id"] == "JK-SGR-01"]
+    gul_events = [e for e in data["items"] if e["location_id"] == "JK-GUL-01"]
+
+    assert len(sgr_events) == 2
+    assert len(gul_events) == 2
+
+    for event in sgr_events:
+        assert event["sector"] == "Srinagar District, J&K"
+        assert event["is_demo_fixture"] is True
+
+    for event in gul_events:
+        assert event["sector"] == "Baramulla District, J&K"
+        assert event["is_demo_fixture"] is True
