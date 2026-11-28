@@ -28,6 +28,21 @@ export interface ListSourcesParams {
   access_mode?: string;
 }
 
+export interface SourceCreatePayload {
+  source_id: string;
+  source_name?: string;
+  provider?: string;
+  dataset?: string;
+  source_type: string;
+  access_mode?: string;
+  licence: string;
+  reference_url?: string;
+  update_frequency_minutes: number;
+  trust_classification?: string;
+  is_authoritative?: boolean;
+  is_demo_fixture?: boolean;
+}
+
 /**
  * Fetch registered data sources from the backend registry (GET /sources).
  */
@@ -55,4 +70,14 @@ export async function refreshSource(sourceId: string): Promise<SourceOut> {
     `/sources/${encodeURIComponent(sourceId)}/fetch`,
     { method: "POST" }
   );
+}
+
+/**
+ * Register a new data source (POST /sources). Requires admin role.
+ */
+export async function registerSource(payload: SourceCreatePayload): Promise<SourceOut> {
+  return apiClient<SourceOut>("/sources", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

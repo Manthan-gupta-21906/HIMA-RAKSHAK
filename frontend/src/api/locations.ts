@@ -34,6 +34,22 @@ export interface ListLocationsParams {
   page_size?: number;
 }
 
+export interface LocationCreatePayload {
+  location_id: string;
+  name: string;
+  admin_unit: string;
+  latitude: number;
+  longitude: number;
+  supported_hazards: string[];
+  coverage_status: "supported" | "partial" | "unsupported";
+  coverage_note: string;
+}
+
+export interface LocationCoverageUpdatePayload {
+  coverage_status: "supported" | "partial" | "unsupported";
+  coverage_note: string;
+}
+
 export async function fetchLocations(params: ListLocationsParams = {}): Promise<LocationListResponse> {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
@@ -48,4 +64,31 @@ export async function fetchLocations(params: ListLocationsParams = {}): Promise<
 
 export async function fetchLocationDetail(locationId: string): Promise<LocationOut> {
   return apiClient<LocationOut>(`/locations/${encodeURIComponent(locationId)}`);
+}
+
+/**
+ * Register a pilot location (POST /locations). Requires admin role.
+ */
+export async function createLocation(payload: LocationCreatePayload): Promise<LocationOut> {
+  return apiClient<LocationOut>("/locations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Update coverage status and note for a location
+ * (PATCH /locations/{location_id}/coverage). Requires admin role.
+ */
+export async function updateLocationCoverage(
+  locationId: string,
+  payload: LocationCoverageUpdatePayload
+): Promise<LocationOut> {
+  return apiClient<LocationOut>(
+    `/locations/${encodeURIComponent(locationId)}/coverage`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
 }
