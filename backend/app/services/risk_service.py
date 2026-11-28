@@ -233,6 +233,8 @@ class RiskService:
             location = self._location_repo.get_by_id(location_id)
             if location is None:
                 raise LocationNotFoundError(f"Location '{location_id}' not found.")
+        else:
+            location = None
 
         all_items = self._risk_repo.list_history(
             location_id=location_id,

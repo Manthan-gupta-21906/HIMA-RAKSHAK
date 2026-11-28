@@ -209,3 +209,65 @@ def test_replay_frame_structure() -> None:
         "summary",
     }
     assert required_fields.issubset(set(frame.keys()))
+
+
+def test_replay_without_location_id() -> None:
+    """Replay without a location filter returns events across all locations."""
+    res = client.get("/risk/replay", headers=_headers("viewer"))
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+
+
+def test_replay_with_invalid_location_id_returns_404() -> None:
+    """Replay with an unknown location ID returns 404."""
+    res = client.get("/risk/replay?location_id=JK-NONEXISTENT", headers=_headers("viewer"))
+    assert res.status_code == 404
+    assert "JK-NONEXISTENT" in res.json()["message"]
+
+
+def test_replay_empty_results() -> None:
+    """Replay with filters matching no assessments returns empty items."""
+    res = client.get(
+        "/risk/replay?location_id=JK-SGR-01&since=2027-01-01T00:00:00Z",
+        headers=_headers("viewer"),
+    )
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["total"] == 0
+    assert data["items"] == []
+
+
+def test_replay_date_filter() -> None:
+    """Replay with a since filter returns only assessments on or after that time."""
+    since_iso = "2026-11-26T18:00:00Z"
+    res = client.get(
+        f"/risk/replay?location_id=JK-SGR-01&since={since_iso}",
+        headers=_headers("viewer"),
+    )
+    assert res.status_code == 200
+
+    data = res.json()
+    # Assessments at 12:00, 06:00, 00:00, and previous day 18:00 (4 flood)
+    # Assessments at 12:00 and 00:00 (2 avalanche)
+    # With since=18:00 on Nov 26, assessments before that are excluded
+    for item in data["items"]:
+        for frame in item["frames"]:
+            assert frame["timestamp"] >= since_iso
+
+
+def test_replay_hazard_and_location_filters_combined() -> None:
+    """Replay with both location_id and hazard_type filters works together."""
+    res = client.get(
+        "/risk/replay?location_id=JK-SGR-01&hazard_type=flood",
+        headers=_headers("viewer"),
+    )
+    assert res.status_code == 200
+
+    data = res.json()
+    assert data["total"] == 1
+    assert data["items"][0]["hazard"] == "flood"
+    assert len(data["items"][0]["frames"]) == 4
