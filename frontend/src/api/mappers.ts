@@ -1,8 +1,14 @@
 import type { MonitoringSector, HazardPathway, RiskTier } from "../data/mockSectors";
 import type { DataSourceRecord, SourceAgency, SourceStatus } from "../types/dataSource";
+import type { HistoricalEvent, ReplayFrame } from "../types/replay";
 import type { OfficialWarning, WarningAgency, WarningHazard, WarningSeverity } from "../types/warning";
 import type { LocationOut } from "./locations";
-import type { LocationRiskState, RiskAssessmentContract } from "./risk";
+import type {
+  LocationRiskState,
+  ReplayEventContract,
+  ReplayFrameContract,
+  RiskAssessmentContract,
+} from "./risk";
 import type { SourceOut } from "./sources";
 import type { OfficialWarningContract } from "./warnings";
 
@@ -139,5 +145,39 @@ export function mapWarningContractToOfficialWarning(warn: OfficialWarningContrac
     advisoryNotes: warn.advisory_notes || "Authoritative official advisory issued by authority.",
     sourceReference: warn.source_reference || warn.provenance,
     isReadOnly: true,
+  };
+}
+
+/**
+ * Map a backend replay event contract to the frontend HistoricalEvent type.
+ * Snake_case backend fields are converted to camelCase frontend fields.
+ * Backend-only fields (risk_class, score, confidence) are not part of the
+ * frontend frame type and are intentionally dropped.
+ */
+export function mapReplayEventToHistoricalEvent(
+  event: ReplayEventContract
+): HistoricalEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    sector: event.sector,
+    hazard: event.hazard,
+    dateRange: event.date_range,
+    provenance: event.provenance,
+    frames: event.frames.map(mapReplayFrameToFrame),
+  };
+}
+
+function mapReplayFrameToFrame(frame: ReplayFrameContract): ReplayFrame {
+  return {
+    id: frame.id,
+    timestamp: frame.timestamp,
+    phaseLabel: frame.phase_label,
+    primaryMetricLabel: frame.primary_metric_label,
+    primaryMetricValue: frame.primary_metric_value,
+    secondaryMetricLabel: frame.secondary_metric_label,
+    secondaryMetricValue: frame.secondary_metric_value,
+    alertTier: frame.alert_tier,
+    summary: frame.summary,
   };
 }

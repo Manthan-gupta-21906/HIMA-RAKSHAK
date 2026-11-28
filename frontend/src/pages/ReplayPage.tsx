@@ -1,18 +1,82 @@
 import { useEffect, useState } from "react";
 import { Badge } from "../components/ui/Badge";
 import { MOCK_REPLAY_EVENTS } from "../data/mockReplayEvents";
+import { fetchReplayEvents } from "../api/risk";
+import { mapReplayEventToHistoricalEvent } from "../api/mappers";
+import type { HistoricalEvent } from "../types/replay";
 import type { PlaybackSpeed, ReplayViewMode } from "../types/replay";
 
 /** Historical Event Replay and system loading/empty edge states matching Stitch system_states_loading_empty_event_replay. */
 export function ReplayPage() {
   const [viewMode, setViewMode] = useState<ReplayViewMode>("replay");
-  const [selectedEventId, setSelectedEventId] = useState(MOCK_REPLAY_EVENTS[0].id);
+  const [events, setEvents] = useState<HistoricalEvent[]>(MOCK_REPLAY_EVENTS);
+  const [selectedEventId, setSelectedEventId] = useState(
+    MOCK_REPLAY_EVENTS[0].id
+  );
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
+  const [isLive, setIsLive] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadReplayEvents() {
+      setApiError(null);
+      try {
+        const res = await fetchReplayEvents();
+        if (isMounted && res.items && res.items.length > 0) {
+          const mapped = res.items.map(mapReplayEventToHistoricalEvent);
+          setEvents(mapped);
+          setIsLive(true);
+          setApiError(null);
+          if (
+            !events.some((e) => e.id === selectedEventId) &&
+            mapped.length > 0
+          ) {
+            setSelectedEventId(mapped[0].id);
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setApiError(
+            err instanceof Error
+              ? `Backend /risk/replay API unavailable: ${err.message}. Showing sample reconstructions.`
+              : "Backend /risk/replay API unavailable."
+          );
+        }
+      }
+    }
+
+    loadReplayEvents();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const activeEvent =
-    MOCK_REPLAY_EVENTS.find((e) => e.id === selectedEventId) ?? MOCK_REPLAY_EVENTS[0];
+    events.find((e) => e.id === selectedEventId) ?? events[0];
+
+  if (!activeEvent) {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Incident Reconstruction &amp; Edge States
+            </span>
+            <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
+              Historical Event Replay
+            </h1>
+          </div>
+        </div>
+        <div className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center text-xs text-text-muted">
+          No historical replay events are available from the backend.
+        </div>
+      </div>
+    );
+  }
+
   const frames = activeEvent.frames;
   const safeIndex = Math.min(frameIndex, frames.length - 1);
   const activeFrame = frames[safeIndex];
@@ -42,14 +106,21 @@ export function ReplayPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-            Incident Reconstruction &amp; Edge States
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Incident Reconstruction &amp; Edge States
+            </span>
+            <Badge tone={isLive ? "clear" : "neutral"}>
+              {isLive ? "Live Backend History" : "Sample Reconstruction"}
+            </Badge>
+            <Badge tone="neutral">Not Live Telemetry</Badge>
+          </div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
             Historical Event Replay
           </h1>
           <p className="text-xs sm:text-sm text-secondary mt-0.5">
-            Time-sequenced historical reconstruction alongside predictable loading and zero-threat states.
+            Time-sequenced historical reconstruction alongside predictable loading
+            and zero-threat states.
           </p>
         </div>
 
@@ -79,6 +150,39 @@ export function ReplayPage() {
           ))}
         </div>
       </div>
+
+      {apiError && (
+        <div
+          className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-amber-500">
+              info
+            </span>
+            <span>{apiError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setApiError(null);
+              void fetchReplayEvents()
+                .then((res) => {
+                  if (res.items && res.items.length > 0) {
+                    const mapped = res.items.map(
+                      mapReplayEventToHistoricalEvent
+                    );
+                    setEvents(mapped);
+                    setIsLive(true);
+                  }
+                })
+                .catch(() => {});
+            }}
+            className="px-3 py-1 rounded bg-surface-container hover:bg-surface-container-high text-text-primary font-semibold"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
       {viewMode === "loading" ? (
         <section aria-label="Telemetry loading state" className="flex flex-col gap-4">
@@ -158,7 +262,7 @@ export function ReplayPage() {
                   onChange={(e) => handleEventChange(e.target.value)}
                   className="h-10 px-3 rounded-lg bg-surface-container-lowest border border-border-hairline text-xs sm:text-sm font-medium text-text-primary"
                 >
-                  {MOCK_REPLAY_EVENTS.map((evt) => (
+                  {events.map((evt) => (
                     <option key={evt.id} value={evt.id}>
                       {evt.title} ({evt.dateRange})
                     </option>
@@ -190,7 +294,9 @@ export function ReplayPage() {
 
             <div className="flex flex-col gap-2 pt-2 border-t border-border-hairline">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-text-primary">{activeFrame.phaseLabel}</span>
+                <span className="font-semibold text-text-primary">
+                  {activeFrame.phaseLabel}
+                </span>
                 <span className="text-text-muted">
                   Frame {safeIndex + 1} of {frames.length}
                 </span>
@@ -242,7 +348,9 @@ export function ReplayPage() {
                     disabled={safeIndex >= frames.length - 1}
                     onClick={() => {
                       setIsPlaying(false);
-                      setFrameIndex((prev) => Math.min(frames.length - 1, prev + 1));
+                      setFrameIndex((prev) =>
+                        Math.min(frames.length - 1, prev + 1)
+                      );
                     }}
                     className="h-9 px-3 rounded-full border border-border-hairline bg-surface-container-low hover:bg-surface-container text-xs font-semibold disabled:opacity-40 cursor-pointer"
                   >
@@ -251,7 +359,9 @@ export function ReplayPage() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-semibold text-text-muted mr-1">Speed:</span>
+                  <span className="text-[11px] font-semibold text-text-muted mr-1">
+                    Speed:
+                  </span>
                   {([1, 2, 4] as const).map((spd) => (
                     <button
                       key={spd}
@@ -280,11 +390,14 @@ export function ReplayPage() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
                   {activeEvent.sector} • {activeFrame.timestamp}
                 </span>
-                <h2 className="text-base font-bold text-text-primary mt-0.5">{activeEvent.title}</h2>
+                <h2 className="text-base font-bold text-text-primary mt-0.5">
+                  {activeEvent.title}
+                </h2>
               </div>
               <Badge
                 tone={
-                  activeFrame.alertTier === "Emergency" || activeFrame.alertTier === "High Risk"
+                  activeFrame.alertTier === "Emergency" ||
+                  activeFrame.alertTier === "High Risk"
                     ? "emergency"
                     : "warning"
                 }
@@ -320,7 +433,9 @@ export function ReplayPage() {
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-secondary">{activeFrame.summary}</p>
+            <p className="text-xs sm:text-sm text-secondary">
+              {activeFrame.summary}
+            </p>
           </section>
         </div>
       ) : null}

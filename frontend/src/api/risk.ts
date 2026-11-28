@@ -155,6 +155,62 @@ export async function fetchLocationPriority(
   );
 }
 
+export interface ReplayFrameContract {
+  id: string;
+  timestamp: string;
+  phase_label: string;
+  primary_metric_label: string;
+  primary_metric_value: string;
+  secondary_metric_label: string;
+  secondary_metric_value: string;
+  alert_tier: string;
+  risk_class: string;
+  score: number | null;
+  confidence: number;
+  summary: string;
+}
+
+export interface ReplayEventContract {
+  id: string;
+  location_id: string;
+  title: string;
+  sector: string;
+  hazard: "flood" | "avalanche";
+  date_range: string;
+  provenance: string;
+  is_demo_fixture: boolean;
+  frames: ReplayFrameContract[];
+}
+
+export interface ReplayEventsResponse {
+  total: number;
+  items: ReplayEventContract[];
+}
+
+/**
+ * Fetch chronological historical replay sequences reconstructed from persisted
+ * risk assessment history (GET /risk/replay).
+ */
+export async function fetchReplayEvents(
+  params: {
+    location_id?: string;
+    hazard_type?: "flood" | "avalanche";
+    since?: string;
+    limit?: number;
+  } = {}
+): Promise<ReplayEventsResponse> {
+  const query = new URLSearchParams();
+  if (params.location_id) query.set("location_id", params.location_id);
+  if (params.hazard_type) query.set("hazard_type", params.hazard_type);
+  if (params.since) query.set("since", params.since);
+  if (params.limit) query.set("limit", String(params.limit));
+
+  const qs = query.toString();
+  return apiClient<ReplayEventsResponse>(
+    `/risk/replay${qs ? `?${qs}` : ""}`
+  );
+}
+
 export interface RiskEvaluationResponse {
   location_id: string;
   risk_state: LocationRiskState;
