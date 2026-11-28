@@ -138,6 +138,65 @@ describe("LocationDetailPage live exposure and priority", () => {
     expect(screen.getAllByText("Live Backend").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("renders live risk-state hazard cards without blending pathways", async () => {
+    vi.mocked(fetchLocationRiskState).mockResolvedValueOnce({
+      ...RISK_STATE,
+      flood: {
+        risk_id: "risk-flood-live",
+        location_id: "JK-GUL-01",
+        hazard_type: "flood",
+        risk_class: "low",
+        score: 0.24,
+        confidence: 0.7,
+        lead_time_hours: 12,
+        freshness: "fresh",
+        prediction_status: "ready",
+        readiness_reason: null,
+        assessed_at: "2026-11-29T00:00:00Z",
+        model_version: "flood-baseline-v1",
+        provenance: {
+          source_id: "src-cwc-01",
+          source_name: "CWC",
+          licence: "GODL",
+          is_demo_fixture: true,
+          ingested_at: "2026-11-29T00:05:00Z",
+        },
+      },
+      avalanche: {
+        risk_id: "risk-avalanche-live",
+        location_id: "JK-GUL-01",
+        hazard_type: "avalanche",
+        risk_class: "severe",
+        score: 0.95,
+        confidence: 0.9,
+        lead_time_hours: 24,
+        freshness: "fresh",
+        prediction_status: "ready",
+        readiness_reason: null,
+        assessed_at: "2026-11-29T00:00:00Z",
+        model_version: "dgre-avalanche-v1",
+        provenance: {
+          source_id: "src-dgre-01",
+          source_name: "DGRE",
+          licence: "GODL",
+          is_demo_fixture: true,
+          ingested_at: "2026-11-29T00:05:00Z",
+        },
+      },
+      primary_hazard: "avalanche",
+      highest_risk_class: "severe",
+    });
+
+    seedSession();
+    render(<App />);
+
+    expect(await screen.findByText("Severe")).toBeInTheDocument();
+    expect(screen.getByText("Low")).toBeInTheDocument();
+    expect(screen.getByText("Live Risk State")).toBeInTheDocument();
+    expect(screen.queryByText("Stage 3 Warning")).not.toBeInTheDocument();
+    expect(screen.queryByText("Normal Range")).not.toBeInTheDocument();
+  });
+
   it("shows explicit unavailable states instead of faking live exposure or priority", async () => {
     vi.mocked(fetchLocationExposure).mockRejectedValueOnce(new Error("exposure offline"));
     vi.mocked(fetchLocationPriority).mockRejectedValueOnce(new Error("priority offline"));

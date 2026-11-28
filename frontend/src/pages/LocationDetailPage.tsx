@@ -9,6 +9,7 @@ import {
   type LocationRiskState,
   type PriorityAssessment,
 } from "../api/risk";
+import { mapRiskStateToHazardEngines } from "../api/riskMappers";
 import { HazardEngineCard } from "../components/location/HazardEngineCard";
 import { LocationKpiCard } from "../components/location/LocationKpiCard";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
@@ -64,7 +65,7 @@ export function LocationDetailPage() {
   const sector = MOCK_SECTORS.find((item) => item.id === id);
   const detail = id ? getLocationDetail(id) : null;
   const [liveLocation, setLiveLocation] = useState<LocationOut | null>(null);
-  const [, setLiveRiskState] = useState<LocationRiskState | null>(null);
+  const [liveRiskState, setLiveRiskState] = useState<LocationRiskState | null>(null);
   const [liveExposure, setLiveExposure] = useState<LocationExposureProfile | null>(null);
   const [livePriority, setLivePriority] = useState<PriorityAssessment | null>(null);
   const [exposureError, setExposureError] = useState<string | null>(null);
@@ -147,6 +148,8 @@ export function LocationDetailPage() {
       ? `Telemetry: ${offlineSensors} Station${offlineSensors > 1 ? "s" : ""} Offline`
       : "Telemetry: All Stations Online";
 
+  const liveEngines = liveRiskState ? mapRiskStateToHazardEngines(liveRiskState) : null;
+
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 pb-4 border-b border-border-hairline">
@@ -202,16 +205,21 @@ export function LocationDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <section className="lg:col-span-7 flex flex-col gap-4" aria-label="Hazard engine telemetry">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-text-muted">
-              Hazard Engine Telemetry
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-text-muted">
+                Hazard Engine Telemetry
+              </h2>
+              <Badge tone={liveEngines ? "clear" : "neutral"}>
+                {liveEngines ? "Live Risk State" : "Sample Engine Data"}
+              </Badge>
+            </div>
             <span className="text-[11px] text-text-muted">
               Independent flood and avalanche pathways
             </span>
           </div>
 
           <HazardEngineCard
-            engine={detail.avalanche}
+            engine={liveEngines?.avalanche ?? detail.avalanche}
             fieldLogHref={
               canLogObservations
                 ? `/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=avalanche`
@@ -219,7 +227,7 @@ export function LocationDetailPage() {
             }
           />
           <HazardEngineCard
-            engine={detail.flood}
+            engine={liveEngines?.flood ?? detail.flood}
             fieldLogHref={
               canLogObservations
                 ? `/field-log?sector=${encodeURIComponent(detail.sectorId)}&hazard=flood`
