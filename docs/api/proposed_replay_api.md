@@ -1,20 +1,12 @@
-# Proposed Historical Replay API Contract
+# Historical Replay API Contract (Implemented)
 
-This document proposes a contract for serving curated historical replay sequences
-in HIMA-RAKSHAK. It does **not** implement anything on the backend — no endpoint
-exists today — and the frontend `ReplayPage` therefore continues to use clearly
-labeled sample reconstructions and never pretends replay is live.
+This document describes the `GET /risk/replay` endpoint for serving curated
+historical replay sequences in HIMA-RAKSHAK. The endpoint is implemented on the
+backend and consumed by the frontend `ReplayPage`, which displays explicit
+"Live Backend History" / "Sample Reconstruction" badges so sample data is never
+mistaken for live telemetry.
 
-## Motivation
-
-`GET /risk/history/{location_id}` returns per-location assessment history for
-auditability, not multi-frame incident reconstructions. `ReplayPage.tsx` drives
-timeline playback from `MOCK_REPLAY_EVENTS` (2014 Jhelum Basin Flood Surge and
-similar sample reconstructions). To let operators replay real incidents rather
-than samples, the backend needs an endpoint that returns chronological frame
-sequences grouped by event, optionally filtered by location, hazard, and time.
-
-## Proposed Endpoint
+## Endpoint
 
 ```
 GET /risk/replay
@@ -36,28 +28,28 @@ GET /risk/replay
   "total": 2,
   "items": [
     {
-      "id": "EVT-JHELUM-2014",
+      "id": "replay-JK-SGR-01-flood",
       "location_id": "JK-SGR-01",
-      "title": "Jhelum Basin Flood Surge (2014)",
-      "sector": "Anantnag - Sangam & Srinagar",
+      "title": "Flood Risk History — JK-SGR-01",
+      "sector": "Srinagar District, J&K",
       "hazard": "flood",
-      "date_range": "2014-09-04 to 2014-09-07",
-      "provenance": "IMD/CWC archival record",
-      "is_demo_fixture": false,
+      "date_range": "2026-11-20 to 2026-11-26",
+      "provenance": "Persisted risk assessment history",
+      "is_demo_fixture": true,
       "frames": [
         {
-          "id": "f1",
-          "timestamp": "2014-09-04T06:00:00+05:30",
-          "phase_label": "T+00h • Onset",
-          "primary_metric_label": "Sangam Gauge",
-          "primary_metric_value": "14.2 ft",
-          "secondary_metric_label": "6h Rainfall",
-          "secondary_metric_value": "38 mm",
-          "alert_tier": "Watch",
-          "risk_class": "moderate",
-          "score": 0.45,
-          "confidence": 0.82,
-          "summary": "Persistent monsoon trough over South Kashmir."
+          "id": "replay-JK-SGR-01-flood-f0",
+          "timestamp": "2026-11-20T12:00:00Z",
+          "phase_label": "T+0 • 2026-11-20 12:00 UTC",
+          "primary_metric_label": "Risk Score",
+          "primary_metric_value": "85%",
+          "secondary_metric_label": "Confidence",
+          "secondary_metric_value": "88%",
+          "alert_tier": "High Risk",
+          "risk_class": "high",
+          "score": 0.85,
+          "confidence": 0.88,
+          "summary": "flood risk assessed at high level (88% confidence)."
         }
       ]
     }
@@ -65,14 +57,30 @@ GET /risk/replay
 }
 ```
 
+Frames are ordered chronologically (oldest first) for playback. Each hazard
+pathway (flood, avalanche) is returned as a separate replay event — pathways
+are never blended.
+
 ## Role Policy
 
 Same as other risk-read endpoints: `viewer`, `district_operator`, or `admin`.
 Read-only — no mutation, no alert creation, no official-warning creation.
 
-## Why Not Faked Live Data
+## Frontend Integration
 
-The frontend must never present sample reconstructions as live telemetry. Until
-this endpoint (or an equivalent) is implemented, `ReplayPage` keeps its explicit
-"Sample Reconstruction" labeling and the proposed contract lives here for a
-future backend change.
+`frontend/src/pages/ReplayPage.tsx` fetches `GET /risk/replay` on mount and:
+
+- Shows a "Live Backend History" badge when data comes from the backend.
+- Falls back to `MOCK_REPLAY_EVENTS` (clearly labeled "Sample Reconstruction")
+  when the backend is unavailable or returns no events.
+- Displays an explicit error message and retry button on API failure.
+- Never presents sample reconstructions as live telemetry.
+
+## Implementation
+
+- Backend: `backend/app/api/routes/risk.py` (`GET /risk/replay`)
+- Backend service: `backend/app/services/risk_service.py` (`RiskService.get_replay_events`)
+- Backend schema: `backend/app/schemas/risk.py` (`ReplayFrameContract`, `ReplayEventContract`, `ReplayEventsResponse`)
+- Frontend API: `frontend/src/api/risk.ts` (`fetchReplayEvents`)
+- Frontend mapper: `frontend/src/api/mappers.ts` (`mapReplayEventToHistoricalEvent`)
+- Frontend page: `frontend/src/pages/ReplayPage.tsx`
