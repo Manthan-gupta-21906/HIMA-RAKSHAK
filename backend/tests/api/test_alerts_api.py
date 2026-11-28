@@ -30,6 +30,8 @@ def _alerts_db(tmp_path: Path) -> Generator[None, None, None]:
     Base.metadata.create_all(bind=engine)
     factory = get_session_factory(engine)
 
+    session = factory()
+
     with factory() as seed_db:
         AlertRepository(seed_db).create(
             AlertActionRecord(
@@ -60,8 +62,11 @@ def _alerts_db(tmp_path: Path) -> Generator[None, None, None]:
             session.close()
 
     app.dependency_overrides[alerts_routes._get_db] = _override_get_db
-    yield
-    app.dependency_overrides.clear()
+    try:
+        yield session
+    finally:
+        app.dependency_overrides.pop(alerts_routes._get_db, None)
+        session.close()
 
 
 def _headers(role: str) -> dict[str, str]:
@@ -126,3 +131,17 @@ def test_operator_acknowledges_and_updates_action() -> None:
     assert updated_body["status"] == "resolved"
     assert updated_body["action_note"] == "Road reopened"
     assert updated_body["action_updated_at"] is not None
+
+
+def test_unrelated_dependency_overrides_remain_intact() -> None:
+    """Verify the alerts fixture does not clear unrelated dependency overrides."""
+    from app.api.routes import risk as risk_routes
+
+    def dummy_get_db():
+        pass
+
+    app.dependency_overrides[risk_routes._get_db] = dummy_get_db
+    try:
+        assert app.dependency_overrides.get(risk_routes._get_db) is dummy_get_db
+    finally:
+        app.dependency_overrides.pop(risk_routes._get_db, None)
