@@ -21,6 +21,7 @@ from app.schemas.common import HazardType, PaginationMeta
 from app.schemas.exposure import LocationExposureProfile, PriorityAssessment
 from app.schemas.risk import (
     LocationRiskState,
+    ReplayEventsResponse,
     RiskAssessmentContract,
     RiskAssessmentRequest,
     RiskHistoryResponse,
@@ -226,6 +227,41 @@ def get_location_priority(
     """Generate explainable priority record from hazard, exposure, confidence, and readiness."""
     try:
         return workflow.get_priority(location_id)
+    except LocationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/replay",
+    response_model=ReplayEventsResponse,
+    summary="Persisted historical replay sequences",
+)
+def get_replay_events(
+    location_id: str = Query(..., description="Location ID"),
+    hazard_type: HazardType | None = Query(
+        default=None, description="Optional hazard type filter (flood or avalanche)"
+    ),
+    since: datetime | None = Query(
+        default=None, description="Include assessments on or after this timestamp (ISO 8601)"
+    ),
+    limit: int = Query(
+        default=50, ge=1, le=200, description="Max frames per location/hazard sequence"
+    ),
+    _user: object = Depends(require_any_authenticated),
+    service: RiskService = Depends(get_risk_service),
+) -> ReplayEventsResponse:
+    """Return chronological historical replay sequences reconstructed from
+    persisted risk assessment history. Hazard pathways remain distinct."""
+    try:
+        return service.get_replay_events(
+            location_id=location_id,
+            hazard_type=hazard_type,
+            since=since,
+            limit=limit,
+        )
     except LocationNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
