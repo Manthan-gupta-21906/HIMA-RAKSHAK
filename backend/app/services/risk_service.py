@@ -218,7 +218,7 @@ class RiskService:
 
     def get_replay_events(
         self,
-        location_id: str,
+        location_id: str | None = None,
         hazard_type: HazardType | None = None,
         since: datetime | None = None,
         limit: int = 50,
@@ -229,9 +229,10 @@ class RiskService:
         with each assessment becoming a timestamped frame. Hazard pathways remain
         distinct and are never blended.
         """
-        location = self._location_repo.get_by_id(location_id)
-        if location is None:
-            raise LocationNotFoundError(f"Location '{location_id}' not found.")
+        if location_id is not None:
+            location = self._location_repo.get_by_id(location_id)
+            if location is None:
+                raise LocationNotFoundError(f"Location '{location_id}' not found.")
 
         all_items = self._risk_repo.list_history(
             location_id=location_id,
@@ -249,11 +250,14 @@ class RiskService:
             by_hazard.setdefault(item.hazard_type, []).append(item)
 
         events: list[ReplayEventContract] = []
+        location_display = location_id or "all"
+        sector_name = location.admin_unit if location else "All Locations"
+        is_demo = location.is_demo_fixture if location else False
         for ht, assessments in sorted(by_hazard.items(), key=lambda kv: kv[0].value):
             if not assessments:
                 continue
-            event_id = f"replay-{location_id}-{ht.value}"
-            title = f"{ht.value.title()} Risk History — {location_id}"
+            event_id = f"replay-{location_display}-{ht.value}"
+            title = f"{ht.value.title()} Risk History — {location_display}"
             date_range = (
                 f"{assessments[0].assessed_at.strftime('%Y-%m-%d')} "
                 f"to {assessments[-1].assessed_at.strftime('%Y-%m-%d')}"
@@ -291,13 +295,13 @@ class RiskService:
             events.append(
                 ReplayEventContract(
                     id=event_id,
-                    location_id=location_id,
+                    location_id=location_display,
                     title=title,
-                    sector=location.admin_unit,
+                    sector=sector_name,
                     hazard=ht.value,
                     date_range=date_range,
                     provenance="Persisted risk assessment history",
-                    is_demo_fixture=location.is_demo_fixture,
+                    is_demo_fixture=is_demo,
                     frames=frames,
                 )
             )

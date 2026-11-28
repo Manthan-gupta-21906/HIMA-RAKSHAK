@@ -240,7 +240,9 @@ def get_location_priority(
     summary="Persisted historical replay sequences",
 )
 def get_replay_events(
-    location_id: str = Query(..., description="Location ID"),
+    location_id: str | None = Query(
+        default=None, description="Optional location ID filter"
+    ),
     hazard_type: HazardType | None = Query(
         default=None, description="Optional hazard type filter (flood or avalanche)"
     ),
