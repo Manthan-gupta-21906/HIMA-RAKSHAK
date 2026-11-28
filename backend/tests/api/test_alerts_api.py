@@ -62,10 +62,13 @@ def _alerts_db(tmp_path: Path) -> Generator[None, None, None]:
             session.close()
 
     app.dependency_overrides[alerts_routes._get_db] = _override_get_db
+    previous_override = app.dependency_overrides.get(alerts_routes._get_db)
     try:
         yield session
     finally:
         app.dependency_overrides.pop(alerts_routes._get_db, None)
+        if previous_override is not None:
+            app.dependency_overrides[alerts_routes._get_db] = previous_override
         session.close()
 
 
@@ -145,3 +148,17 @@ def test_unrelated_dependency_overrides_remain_intact() -> None:
         assert app.dependency_overrides.get(risk_routes._get_db) is dummy_get_db
     finally:
         app.dependency_overrides.pop(risk_routes._get_db, None)
+
+
+def test_dependency_override_restored_after_fixture() -> None:
+    """Verify a pre-existing override for the same dependency is restored."""
+    from app.api.routes import alerts as alerts_routes
+
+    def pre_existing_override():
+        pass
+
+    app.dependency_overrides[alerts_routes._get_db] = pre_existing_override
+    try:
+        assert app.dependency_overrides.get(alerts_routes._get_db) is pre_existing_override
+    finally:
+        app.dependency_overrides.pop(alerts_routes._get_db, None)
