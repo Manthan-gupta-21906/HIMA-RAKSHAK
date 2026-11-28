@@ -44,6 +44,52 @@ export interface RiskHistoryResponse {
   } | null;
 }
 
+export type ExposureCoverageStatus = "complete" | "partial" | "unknown";
+
+export interface ExposureAsset {
+  asset_id: string;
+  asset_type: string;
+  name: string;
+  count: number;
+  count_type: "verified" | "estimated";
+  population_affected: number;
+  is_critical: boolean;
+  metadata: Record<string, string | number | boolean>;
+}
+
+/** Spatial exposure profile returned by GET /risk/exposure/{location_id}. */
+export interface LocationExposureProfile {
+  location_id: string;
+  evaluated_at: string;
+  coverage_status: ExposureCoverageStatus;
+  population_exposed: number;
+  settlements_count: number;
+  homes_exposed: number;
+  roads_exposed_km: number;
+  critical_facilities_count: number;
+  assets: ExposureAsset[];
+  missing_layers: string[];
+}
+
+/** Explainable priority assessment returned by GET /risk/priority/{location_id}. */
+export interface PriorityAssessment {
+  location_id: string;
+  evaluated_at: string;
+  hazard_score: number | null;
+  hazard_risk_class: "low" | "moderate" | "high" | "severe" | "unsupported";
+  exposure_score: number;
+  impact_score: number;
+  priority_score: number;
+  coverage_status: ExposureCoverageStatus;
+  priority_level: string;
+  confidence: number;
+  freshness: "fresh" | "stale" | "unknown";
+  prediction_status: "ready" | "indicative" | "stale" | "unsupported";
+  weights_used: Record<string, number>;
+  breakdown: Record<string, number>;
+  explanation: string[];
+}
+
 /**
  * Fetch unified multi-hazard risk state for a location (GET /risk/state/{location_id})
  */
@@ -83,6 +129,29 @@ export async function fetchRiskHistory(
   const qs = query.toString();
   return apiClient<RiskHistoryResponse>(
     `/risk/history/${encodeURIComponent(locationId)}${qs ? `?${qs}` : ""}`
+  );
+}
+
+/**
+ * Fetch spatial exposure for a location (GET /risk/exposure/{location_id}).
+ */
+export async function fetchLocationExposure(
+  locationId: string
+): Promise<LocationExposureProfile> {
+  return apiClient<LocationExposureProfile>(
+    `/risk/exposure/${encodeURIComponent(locationId)}`
+  );
+}
+
+/**
+ * Fetch the explainable priority assessment for a location
+ * (GET /risk/priority/{location_id}).
+ */
+export async function fetchLocationPriority(
+  locationId: string
+): Promise<PriorityAssessment> {
+  return apiClient<PriorityAssessment>(
+    `/risk/priority/${encodeURIComponent(locationId)}`
   );
 }
 

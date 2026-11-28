@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchLocationDetail, type LocationOut } from "../api/locations";
-import { fetchLocationRiskState, type LocationRiskState } from "../api/risk";
+import {
+  fetchLocationExposure,
+  fetchLocationPriority,
+  fetchLocationRiskState,
+  type LocationExposureProfile,
+  type LocationRiskState,
+  type PriorityAssessment,
+} from "../api/risk";
 import { HazardEngineCard } from "../components/location/HazardEngineCard";
 import { LocationKpiCard } from "../components/location/LocationKpiCard";
 import { Badge, type BadgeTone } from "../components/ui/Badge";
@@ -42,6 +49,13 @@ const FACILITY_ICONS: Record<string, string> = {
   Helipads: "flight",
 };
 
+const PRIORITY_BADGE: Record<string, BadgeTone> = {
+  CRITICAL: "emergency",
+  HIGH: "warning",
+  MEDIUM: "neutral",
+  LOW: "clear",
+};
+
 /** Location detail view with separate flood and avalanche engines plus exposure. */
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,13 +65,22 @@ export function LocationDetailPage() {
   const detail = id ? getLocationDetail(id) : null;
   const [liveLocation, setLiveLocation] = useState<LocationOut | null>(null);
   const [, setLiveRiskState] = useState<LocationRiskState | null>(null);
+  const [liveExposure, setLiveExposure] = useState<LocationExposureProfile | null>(null);
+  const [livePriority, setLivePriority] = useState<PriorityAssessment | null>(null);
+  const [exposureError, setExposureError] = useState<string | null>(null);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
-    Promise.allSettled([fetchLocationDetail(id), fetchLocationRiskState(id)])
-      .then(([locRes, riskRes]) => {
+    Promise.allSettled([
+      fetchLocationDetail(id),
+      fetchLocationRiskState(id),
+      fetchLocationExposure(id),
+      fetchLocationPriority(id),
+    ])
+      .then(([locRes, riskRes, exposureRes, priorityRes]) => {
         if (!isMounted) return;
         if (locRes.status === "fulfilled") {
           setLiveLocation(locRes.value);
@@ -66,6 +89,30 @@ export function LocationDetailPage() {
         if (riskRes.status === "fulfilled") {
           setLiveRiskState(riskRes.value);
           setIsLiveConnected(true);
+        }
+        if (exposureRes.status === "fulfilled") {
+          setLiveExposure(exposureRes.value);
+          setExposureError(null);
+          setIsLiveConnected(true);
+        } else {
+          setLiveExposure(null);
+          setExposureError(
+            exposureRes.reason instanceof Error
+              ? exposureRes.reason.message
+              : "Exposure profile unavailable"
+          );
+        }
+        if (priorityRes.status === "fulfilled") {
+          setLivePriority(priorityRes.value);
+          setPriorityError(null);
+          setIsLiveConnected(true);
+        } else {
+          setLivePriority(null);
+          setPriorityError(
+            priorityRes.reason instanceof Error
+              ? priorityRes.reason.message
+              : "Priority assessment unavailable"
+          );
         }
       })
       .catch(() => {});
@@ -116,6 +163,8 @@ export function LocationDetailPage() {
             <Badge tone="neutral">{sector.riskTier}</Badge>
             <Badge tone="neutral">{sector.elevationM} m</Badge>
             {isLiveConnected && <Badge tone="clear">Live Backend Connected</Badge>}
+            {liveExposure && <Badge tone="clear">Live Exposure</Badge>}
+            {livePriority && <Badge tone="clear">Live Priority</Badge>}
             {liveLocation && <Badge tone="neutral">Coverage: {liveLocation.coverage_status}</Badge>}
           </div>
         </div>
@@ -191,83 +240,318 @@ export function LocationDetailPage() {
             aria-labelledby="exposure-title"
             className="bg-surface-card rounded-xl border border-border-hairline shadow-xs p-5 flex flex-col gap-3"
           >
-            <div className="flex items-center justify-between gap-2 pb-3 border-b border-border-hairline">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border-hairline">
               <h3 id="exposure-title" className="text-base font-bold text-text-primary">
                 Exposure &amp; Critical Assets
               </h3>
-              <Badge tone="neutral">{detail.exposure.population} residents</Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                  Elevation
-                </span>
-                <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.elevation}</p>
-              </div>
-              <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                  Population
-                </span>
-                <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.population}</p>
-              </div>
-              <div className="col-span-2 rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                  Access Road
-                </span>
-                <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.road}</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge tone={liveExposure ? "clear" : "neutral"}>
+                  {liveExposure ? "Live Backend" : "Sample Catalogue"}
+                </Badge>
+                <Badge tone="neutral">
+                  {liveExposure
+                    ? `${liveExposure.population_exposed} exposed`
+                    : `${detail.exposure.population} residents`}
+                </Badge>
               </div>
             </div>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                Facilities
-              </span>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {detail.exposure.facilities.map((facility) => (
-                  <span
-                    key={facility.label}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-[10px] font-semibold text-on-surface-variant"
-                  >
-                    <span className="material-symbols-outlined text-[13px]">
-                      {FACILITY_ICONS[facility.label] ?? "place"}
+            {liveExposure ? (
+              <>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Elevation (Catalogue)
                     </span>
-                    {facility.value} {facility.label}
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {detail.exposure.elevation}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Population Exposed
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {liveExposure.population_exposed}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Settlements
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {liveExposure.settlements_count}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Homes Exposed
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {liveExposure.homes_exposed}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Roads Exposed
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {liveExposure.roads_exposed_km.toFixed(1)} km
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Critical Facilities
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">
+                      {liveExposure.critical_facilities_count}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Critical Facility Assets
                   </span>
-                ))}
-              </div>
-            </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {liveExposure.assets.filter(
+                      (asset) => asset.is_critical || asset.asset_type === "critical_facility"
+                    ).length === 0 ? (
+                      <span className="text-[11px] text-text-muted">
+                        No critical facility assets returned by the exposure layer.
+                      </span>
+                    ) : (
+                      liveExposure.assets
+                        .filter(
+                          (asset) => asset.is_critical || asset.asset_type === "critical_facility"
+                        )
+                        .map((asset) => (
+                          <span
+                            key={asset.asset_id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-[10px] font-semibold text-on-surface-variant"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">
+                              local_hospital
+                            </span>
+                            {asset.count} {asset.name}
+                          </span>
+                        ))
+                    )}
+                  </div>
+                </div>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                Critical Assets
-              </span>
-              <ul className="mt-1.5 flex flex-col gap-1.5">
-                {detail.exposure.criticalAssets.map((asset) => (
-                  <li
-                    key={asset}
-                    className="flex items-start gap-1.5 text-[11px] text-on-surface-variant"
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Exposed Assets
+                  </span>
+                  <ul className="mt-1.5 flex flex-col gap-1.5">
+                    {liveExposure.assets.length === 0 ? (
+                      <li className="text-[11px] text-text-muted">
+                        No exposed assets returned by the backend exposure layer.
+                      </li>
+                    ) : (
+                      liveExposure.assets.map((asset) => (
+                        <li
+                          key={asset.asset_id}
+                          className="flex items-start gap-1.5 text-[11px] text-on-surface-variant"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-text-muted shrink-0">
+                            chevron_right
+                          </span>
+                          <span>
+                            {asset.name} ({asset.asset_type}
+                            {asset.count > 1 ? ` ×${asset.count}` : ""} • {asset.count_type})
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+
+                <div className="pt-3 border-t border-border-hairline flex items-start gap-2 text-[11px]">
+                  <span className="material-symbols-outlined text-[15px] text-agency-dgre shrink-0">
+                    layers
+                  </span>
+                  <p className="text-on-surface-variant">
+                    <span className="font-semibold text-text-primary">
+                      Coverage: {liveExposure.coverage_status}
+                    </span>{" "}
+                    —{" "}
+                    {liveExposure.missing_layers.length > 0
+                      ? `missing layers: ${liveExposure.missing_layers.join(", ")}`
+                      : "all exposure layers present."}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {exposureError ? (
+                  <p
+                    role="status"
+                    className="rounded-lg border border-hazard-yellow/70 bg-amber-50 dark:bg-amber-950/40 p-2.5 text-[11px] text-amber-900 dark:text-amber-200"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-text-muted shrink-0">
-                      chevron_right
+                    Live exposure unavailable: {exposureError}. Showing sample catalogue values.
+                  </p>
+                ) : null}
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Elevation
                     </span>
-                    <span>{asset}</span>
-                  </li>
-                ))}
-              </ul>
+                    <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.elevation}</p>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Population
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.population}</p>
+                  </div>
+                  <div className="col-span-2 rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Access Road
+                    </span>
+                    <p className="font-semibold text-text-primary mt-0.5">{detail.exposure.road}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Facilities
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {detail.exposure.facilities.map((facility) => (
+                      <span
+                        key={facility.label}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-[10px] font-semibold text-on-surface-variant"
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {FACILITY_ICONS[facility.label] ?? "place"}
+                        </span>
+                        {facility.value} {facility.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Critical Assets
+                  </span>
+                  <ul className="mt-1.5 flex flex-col gap-1.5">
+                    {detail.exposure.criticalAssets.map((asset) => (
+                      <li
+                        key={asset}
+                        className="flex items-start gap-1.5 text-[11px] text-on-surface-variant"
+                      >
+                        <span className="material-symbols-outlined text-[14px] text-text-muted shrink-0">
+                          chevron_right
+                        </span>
+                        <span>{asset}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="pt-3 border-t border-border-hairline flex items-start gap-2 text-[11px]">
+                  <span className="material-symbols-outlined text-[15px] text-agency-dgre shrink-0">
+                    route
+                  </span>
+                  <p className="text-on-surface-variant">
+                    <span className="font-semibold text-text-primary">
+                      {detail.exposure.accessStatus}
+                    </span>{" "}
+                    — {detail.exposure.accessNote}
+                  </p>
+                </div>
+              </>
+            )}
+          </section>
+
+          <section
+            aria-labelledby="priority-title"
+            className="bg-surface-card rounded-xl border border-border-hairline shadow-xs p-5 flex flex-col gap-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border-hairline">
+              <h3 id="priority-title" className="text-base font-bold text-text-primary">
+                Priority Assessment
+              </h3>
+              <Badge tone={livePriority ? "clear" : "neutral"}>
+                {livePriority ? "Live Backend" : "Unavailable"}
+              </Badge>
             </div>
 
-            <div className="pt-3 border-t border-border-hairline flex items-start gap-2 text-[11px]">
-              <span className="material-symbols-outlined text-[15px] text-agency-dgre shrink-0">
-                route
-              </span>
-              <p className="text-on-surface-variant">
-                <span className="font-semibold text-text-primary">
-                  {detail.exposure.accessStatus}
-                </span>{" "}
-                — {detail.exposure.accessNote}
+            {livePriority ? (
+              <>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge tone={PRIORITY_BADGE[livePriority.priority_level] ?? "neutral"}>
+                    {livePriority.priority_level}
+                  </Badge>
+                  <Badge tone="neutral">{livePriority.hazard_risk_class}</Badge>
+                  <span className="text-[11px] font-semibold text-text-muted">
+                    Score {(livePriority.priority_score * 100).toFixed(0)}%
+                  </span>
+                </div>
+
+                <dl className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Freshness
+                    </dt>
+                    <dd className="font-semibold text-text-primary mt-0.5 capitalize">
+                      {livePriority.freshness}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Prediction
+                    </dt>
+                    <dd className="font-semibold text-text-primary mt-0.5 capitalize">
+                      {livePriority.prediction_status}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 rounded-lg bg-surface-container-low border border-border-hairline p-2.5">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Exposure Coverage
+                    </dt>
+                    <dd className="font-semibold text-text-primary mt-0.5 capitalize">
+                      {livePriority.coverage_status}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Why This Priority
+                  </span>
+                  <ul className="mt-1.5 flex flex-col gap-1.5">
+                    {livePriority.explanation.length === 0 ? (
+                      <li className="text-[11px] text-text-muted">
+                        No explanation was returned by the priority engine.
+                      </li>
+                    ) : (
+                      livePriority.explanation.map((line) => (
+                        <li
+                          key={line}
+                          className="flex items-start gap-1.5 text-[11px] text-on-surface-variant"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-text-muted shrink-0">
+                            chevron_right
+                          </span>
+                          <span>{line}</span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <p className="text-[11px] text-text-muted">
+                {priorityError
+                  ? `Live priority assessment unavailable: ${priorityError}.`
+                  : "Priority assessment unavailable for this location."}
               </p>
-            </div>
+            )}
           </section>
 
           <section
