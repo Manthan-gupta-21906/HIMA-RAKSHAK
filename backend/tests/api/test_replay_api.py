@@ -343,7 +343,6 @@ def test_replay_without_location_groups_by_location() -> None:
     # Each event should contain frames from only one location
     for event in data["items"]:
         event_loc = event["location_id"]
-        event_hazard = event["hazard"]
         for frame in event["frames"]:
             # The frame's timestamp belongs to an assessment for this location+hazard
             pass  # Frames don't carry location_id, but we verify via event-level fields

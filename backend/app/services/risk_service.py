@@ -249,7 +249,9 @@ class RiskService:
         # Group by (location_id, hazard_type) so each location gets its own
         # flood and avalanche events. Frames from different locations are
         # never mixed.
-        by_location_and_hazard: dict[tuple[str | None, HazardType], list[RiskAssessmentContract]] = {}
+        by_location_and_hazard: dict[
+            tuple[str | None, HazardType], list[RiskAssessmentContract]
+        ] = {}
         for item in all_items:
             key = (item.location_id, item.hazard_type)
             by_location_and_hazard.setdefault(key, []).append(item)
