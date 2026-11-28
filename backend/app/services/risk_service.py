@@ -10,8 +10,14 @@ from app.repositories.location_repository import SqlAlchemyLocationRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.risk_repository import RiskAssessmentRepository
 from app.repositories.source_repository import SourceRepository
-from app.schemas.common import HazardType, ProvenanceMeta, ensure_timezone_aware
-from app.schemas.risk import LocationRiskState, RiskAssessmentContract
+from app.schemas.common import HazardType, ProvenanceMeta, RiskClass, ensure_timezone_aware
+from app.schemas.risk import (
+    LocationRiskState,
+    ReplayEventContract,
+    ReplayEventsResponse,
+    ReplayFrameContract,
+    RiskAssessmentContract,
+)
 from app.services.location_service import LocationNotFoundError
 from app.services.observation_service import model_to_contract
 from app.services.risk_orchestrator import RiskOrchestrator
@@ -209,3 +215,120 @@ class RiskService:
                 f"No risk assessments found for location '{location_id}'."
             )
         return self._orchestrator.get_location_risk_state(location_id)
+
+    def get_replay_events(
+        self,
+        location_id: str | None = None,
+        hazard_type: HazardType | None = None,
+        since: datetime | None = None,
+        limit: int = 50,
+    ) -> ReplayEventsResponse:
+        """Build chronological replay event sequences from persisted risk history.
+
+        Groups persisted risk assessments by hazard pathway into replay events,
+        with each assessment becoming a timestamped frame. Hazard pathways remain
+        distinct and are never blended.
+        """
+        if location_id is not None:
+            location = self._location_repo.get_by_id(location_id)
+            if location is None:
+                raise LocationNotFoundError(f"Location '{location_id}' not found.")
+        else:
+            location = None
+
+        all_items = self._risk_repo.list_history(
+            location_id=location_id,
+            hazard_type=hazard_type,
+            since=since,
+            limit=limit,
+        )
+
+        # Reverse to chronological order (oldest first) for playback.
+        all_items.reverse()
+
+        # Group by (location_id, hazard_type) so each location gets its own
+        # flood and avalanche events. Frames from different locations are
+        # never mixed.
+        by_location_and_hazard: dict[
+            tuple[str | None, HazardType], list[RiskAssessmentContract]
+        ] = {}
+        for item in all_items:
+            key = (item.location_id, item.hazard_type)
+            by_location_and_hazard.setdefault(key, []).append(item)
+
+        events: list[ReplayEventContract] = []
+        for (loc_id, ht), assessments in sorted(
+            by_location_and_hazard.items(), key=lambda kv: (kv[0][0] or "", kv[0][1].value)
+        ):
+            if not assessments:
+                continue
+
+            location = None
+            if loc_id is not None:
+                location = self._location_repo.get_by_id(loc_id)
+            location_display = loc_id or "all"
+            sector_name = location.admin_unit if location else "All Locations"
+            is_demo = location.is_demo_fixture if location else False
+
+            event_id = f"replay-{location_display}-{ht.value}"
+            title = f"{ht.value.title()} Risk History — {location_display}"
+            date_range = (
+                f"{assessments[0].assessed_at.strftime('%Y-%m-%d')} "
+                f"to {assessments[-1].assessed_at.strftime('%Y-%m-%d')}"
+            )
+
+            frames: list[ReplayFrameContract] = []
+            for idx, assessment in enumerate(assessments[:limit]):
+                frames.append(
+                    ReplayFrameContract(
+                        id=f"{event_id}-f{idx}",
+                        timestamp=assessment.assessed_at.isoformat(),
+                        phase_label=(
+                            f"T+{idx} • "
+                            f"{assessment.assessed_at.strftime('%Y-%m-%d %H:%M UTC')}"
+                        ),
+                        primary_metric_label="Risk Score",
+                        primary_metric_value=(
+                            f"{(assessment.score or 0) * 100:.0f}%"
+                            if assessment.score is not None
+                            else "N/A"
+                        ),
+                        secondary_metric_label="Confidence",
+                        secondary_metric_value=f"{assessment.confidence * 100:.0f}%",
+                        alert_tier=_risk_class_to_alert_tier(assessment.risk_class),
+                        risk_class=assessment.risk_class.value,
+                        score=assessment.score,
+                        confidence=assessment.confidence,
+                        summary=(
+                            f"{ht.value} risk assessed at {assessment.risk_class.value} "
+                            f"level ({assessment.confidence * 100:.0f}% confidence)."
+                        ),
+                    )
+                )
+
+            events.append(
+                ReplayEventContract(
+                    id=event_id,
+                    location_id=location_display,
+                    title=title,
+                    sector=sector_name,
+                    hazard=ht.value,
+                    date_range=date_range,
+                    provenance="Persisted risk assessment history",
+                    is_demo_fixture=is_demo,
+                    frames=frames,
+                )
+            )
+
+        return ReplayEventsResponse(total=len(events), items=events)
+
+
+def _risk_class_to_alert_tier(risk_class: RiskClass) -> str:
+    """Map a risk class to a human-readable alert tier for replay display."""
+    return {
+        RiskClass.SEVERE: "Emergency",
+        RiskClass.HIGH: "High Risk",
+        RiskClass.MODERATE: "Watch",
+        RiskClass.LOW: "Normal",
+        RiskClass.UNSUPPORTED: "Unknown",
+    }[risk_class]

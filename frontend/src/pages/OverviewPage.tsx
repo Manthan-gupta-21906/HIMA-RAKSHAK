@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchAlerts } from "../api/alerts";
 import { fetchLocations } from "../api/locations";
 import { mapLocationAndRiskToSector } from "../api/mappers";
 import { fetchLocationRiskState } from "../api/risk";
@@ -15,13 +16,40 @@ export function OverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("Sample Data");
+  const [alertStats, setAlertStats] = useState<{
+    active: number;
+    acknowledged: number;
+    inProgress: number;
+    resolved: number;
+  } | null>(null);
 
   const loadData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
     setError(null);
 
     try {
-      const locResponse = await fetchLocations();
+      const [locResult, alertResult] = await Promise.allSettled([
+        fetchLocations(),
+        fetchAlerts(),
+      ]);
+
+      let nextAlertStats: typeof alertStats = null;
+      if (alertResult.status === "fulfilled") {
+        const alertItems = alertResult.value.items;
+        nextAlertStats = {
+          active: alertItems.filter((alert) => alert.status === "active").length,
+          acknowledged: alertItems.filter((alert) => alert.status === "acknowledged").length,
+          inProgress: alertItems.filter((alert) => alert.status === "in_progress").length,
+          resolved: alertItems.filter((alert) => alert.status === "resolved").length,
+        };
+      }
+      setAlertStats(nextAlertStats);
+
+      if (locResult.status === "rejected") {
+        throw locResult.reason;
+      }
+
+      const locResponse = locResult.value;
       if (locResponse && Array.isArray(locResponse.items) && locResponse.items.length > 0) {
         // Fetch risk states for all locations
         const mappedSectors = await Promise.all(
@@ -40,17 +68,16 @@ export function OverviewPage() {
         setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 
         // Compute real KPIs from backend data
-        const alertCount = mappedSectors.filter(
-          (s) => s.isPriority || s.riskTier === "High Risk" || s.riskTier === "Stage 3"
-        ).length;
         const nominalCount = mappedSectors.filter((s) => !s.isStale).length;
         const delayedCount = mappedSectors.filter((s) => s.isStale).length;
 
         setKpis([
           {
             label: "Active Alerts",
-            value: `${alertCount} Sectors`,
-            subtitle: alertCount > 0 ? "Requires active attention" : "Nominal baseline",
+            value: nextAlertStats ? `${nextAlertStats.active} Active` : "—",
+            subtitle: nextAlertStats
+              ? `${nextAlertStats.acknowledged} acknowledged • ${nextAlertStats.inProgress} in progress`
+              : "Operational alert feed unavailable",
           },
           {
             label: "Monitored Locations",
@@ -165,6 +192,19 @@ export function OverviewPage() {
           >
             Retry Connection
           </button>
+        </div>
+      )}
+
+      {isLive && !alertStats && (
+        <div
+          role="status"
+          className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[18px] text-amber-500">info</span>
+          <span>
+            Operational alert feed unavailable. Active Alerts is shown as unavailable rather
+            than inferred from risk tiers.
+          </span>
         </div>
       )}
 

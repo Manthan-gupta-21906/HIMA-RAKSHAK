@@ -65,3 +65,41 @@ class RiskAssessmentRequest(BaseModel):
     """Optional parameters for triggering a multi-hazard risk assessment."""
 
     cutoff_at: AwareDatetime | None = None
+
+
+class ReplayFrameContract(BaseModel):
+    """A single timestamped frame in a historical replay sequence."""
+
+    id: str
+    timestamp: str
+    phase_label: str
+    primary_metric_label: str
+    primary_metric_value: str
+    secondary_metric_label: str
+    secondary_metric_value: str
+    alert_tier: str
+    risk_class: str
+    score: float | None = None
+    confidence: float
+    summary: str
+
+
+class ReplayEventContract(BaseModel):
+    """A chronological sequence of risk assessment frames for one hazard."""
+
+    id: str
+    location_id: str
+    title: str
+    sector: str
+    hazard: str
+    date_range: str
+    provenance: str
+    is_demo_fixture: bool
+    frames: list[ReplayFrameContract] = Field(default_factory=list)
+
+
+class ReplayEventsResponse(BaseModel):
+    """Response envelope for historical replay sequences."""
+
+    total: int
+    items: list[ReplayEventContract]

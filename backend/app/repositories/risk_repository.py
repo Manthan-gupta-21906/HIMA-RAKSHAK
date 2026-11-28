@@ -131,13 +131,15 @@ class RiskAssessmentRepository:
 
     def list_history(
         self,
-        location_id: str,
+        location_id: str | None = None,
         hazard_type: HazardType | None = None,
         since: datetime | None = None,
         limit: int = 50,
     ) -> list[RiskAssessmentContract]:
         """List historical assessments for a location with optional hazard and time filtering."""
-        stmt = select(RiskAssessmentModel).where(RiskAssessmentModel.location_id == location_id)
+        stmt = select(RiskAssessmentModel)
+        if location_id is not None:
+            stmt = stmt.where(RiskAssessmentModel.location_id == location_id)
         if hazard_type:
             stmt = stmt.where(RiskAssessmentModel.hazard_type == hazard_type.value)
         if since:
