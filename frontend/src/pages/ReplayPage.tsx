@@ -9,20 +9,20 @@ import type { PlaybackSpeed, ReplayViewMode } from "../types/replay";
 /** Historical Event Replay and system loading/empty edge states matching Stitch system_states_loading_empty_event_replay. */
 export function ReplayPage() {
   const [viewMode, setViewMode] = useState<ReplayViewMode>("replay");
-  const [events, setEvents] = useState<HistoricalEvent[]>(MOCK_REPLAY_EVENTS);
-  const [selectedEventId, setSelectedEventId] = useState(
-    MOCK_REPLAY_EVENTS[0].id
-  );
+  const [events, setEvents] = useState<HistoricalEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
   const [isLive, setIsLive] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     async function loadReplayEvents() {
       setApiError(null);
+      setIsEmpty(false);
       try {
         const res = await fetchReplayEvents();
         if (isMounted && res.items && res.items.length > 0) {
@@ -30,20 +30,34 @@ export function ReplayPage() {
           setEvents(mapped);
           setIsLive(true);
           setApiError(null);
+          setIsEmpty(false);
           if (
             !events.some((e) => e.id === selectedEventId) &&
             mapped.length > 0
           ) {
             setSelectedEventId(mapped[0].id);
           }
+        } else if (isMounted) {
+          // Backend connected but returned no historical records.
+          setEvents([]);
+          setIsLive(false);
+          setIsEmpty(true);
+          setSelectedEventId("");
         }
       } catch (err) {
         if (isMounted) {
+          // Backend unavailable — fall back to clearly labeled sample reconstructions.
+          setEvents(MOCK_REPLAY_EVENTS);
+          setIsLive(false);
+          setIsEmpty(false);
           setApiError(
             err instanceof Error
               ? `Backend /risk/replay API unavailable: ${err.message}. Showing sample reconstructions.`
               : "Backend /risk/replay API unavailable."
           );
+          if (!selectedEventId && MOCK_REPLAY_EVENTS.length > 0) {
+            setSelectedEventId(MOCK_REPLAY_EVENTS[0].id);
+          }
         }
       }
     }
@@ -57,27 +71,7 @@ export function ReplayPage() {
   const activeEvent =
     events.find((e) => e.id === selectedEventId) ?? events[0];
 
-  if (!activeEvent) {
-    return (
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-              Incident Reconstruction &amp; Edge States
-            </span>
-            <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
-              Historical Event Replay
-            </h1>
-          </div>
-        </div>
-        <div className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center text-xs text-text-muted">
-          No historical replay events are available from the backend.
-        </div>
-      </div>
-    );
-  }
-
-  const frames = activeEvent.frames;
+  const frames = activeEvent?.frames ?? [];
   const safeIndex = Math.min(frameIndex, frames.length - 1);
   const activeFrame = frames[safeIndex];
 
@@ -102,6 +96,33 @@ export function ReplayPage() {
     setIsPlaying(false);
   };
 
+  if (!activeEvent) {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
+                Incident Reconstruction &amp; Edge States
+              </span>
+              <Badge tone={isEmpty ? "neutral" : "warning"}>
+                {isEmpty ? "No Backend Records" : "Sample Data"}
+              </Badge>
+            </div>
+            <h1 className="text-2xl font-bold text-text-primary tracking-tight mt-0.5">
+              Historical Event Replay
+            </h1>
+          </div>
+        </div>
+        <div className="bg-surface-card border border-border-hairline rounded-xl p-8 text-center text-xs text-text-muted">
+          {isEmpty
+            ? "No historical replay events are available from the backend."
+            : "No historical replay events are available."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-border-hairline">
@@ -110,8 +131,12 @@ export function ReplayPage() {
             <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
               Incident Reconstruction &amp; Edge States
             </span>
-            <Badge tone={isLive ? "clear" : "neutral"}>
-              {isLive ? "Live Backend History" : "Sample Reconstruction"}
+            <Badge tone={isLive ? "clear" : isEmpty ? "neutral" : "warning"}>
+              {isLive
+                ? "Live Backend History"
+                : isEmpty
+                  ? "No Backend Records"
+                  : "Sample Reconstruction"}
             </Badge>
             <Badge tone="neutral">Not Live Telemetry</Badge>
           </div>
@@ -173,6 +198,13 @@ export function ReplayPage() {
                     );
                     setEvents(mapped);
                     setIsLive(true);
+                    setIsEmpty(false);
+                    setApiError(null);
+                  } else {
+                    setEvents([]);
+                    setIsLive(false);
+                    setIsEmpty(true);
+                    setApiError(null);
                   }
                 })
                 .catch(() => {});

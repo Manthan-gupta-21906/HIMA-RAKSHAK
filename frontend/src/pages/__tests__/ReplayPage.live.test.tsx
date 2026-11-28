@@ -126,10 +126,52 @@ describe("ReplayPage live backend integration", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows Not Live Telemetry badge to distinguish from live data", async () => {
+  it("shows empty state when backend has no records (not sample data)", async () => {
+    vi.mocked(fetchReplayEvents).mockResolvedValue({
+      total: 0,
+      items: [],
+    } as ReplayEventsResponse);
+
     seedSession();
     render(<App />);
 
-    expect(screen.getByText("Not Live Telemetry")).toBeInTheDocument();
+    // Should show empty state, not sample reconstruction
+    expect(
+      await screen.findByText("No Backend Records")
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("No historical replay events are available from the backend.")
+    ).toBeInTheDocument();
+    // Sample data should NOT appear
+    expect(
+      screen.queryByRole("heading", { name: /Jhelum Basin Flood Surge/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Sample Reconstruction")).not.toBeInTheDocument();
+  });
+
+  it("shows Not Live Telemetry badge to distinguish from live data", async () => {
+    vi.mocked(fetchReplayEvents).mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: "replay-JK-SGR-01-flood",
+          location_id: "JK-SGR-01",
+          title: "Flood Risk History — JK-SGR-01",
+          sector: "Srinagar District, J&K",
+          hazard: "flood",
+          date_range: "2026-11-20 to 2026-11-26",
+          provenance: "Persisted risk assessment history",
+          is_demo_fixture: true,
+          frames: [],
+        },
+      ],
+    } as ReplayEventsResponse);
+
+    seedSession();
+    render(<App />);
+
+    expect(
+      await screen.findByText("Not Live Telemetry")
+    ).toBeInTheDocument();
   });
 });
