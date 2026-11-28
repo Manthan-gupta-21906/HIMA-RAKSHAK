@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
+import { AlertsPage } from "./pages/AlertsPage";
 import { FieldObservationPage } from "./pages/FieldObservationPage";
 import { LocationDetailPage } from "./pages/LocationDetailPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -43,6 +44,7 @@ export function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/warnings" element={<WarningsPage />} />
               <Route path="/sources" element={<SourcesPage />} />
               <Route path="/replay" element={<ReplayPage />} />

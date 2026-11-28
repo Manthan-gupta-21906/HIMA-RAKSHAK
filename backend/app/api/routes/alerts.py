@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from app.auth import require_any_authenticated, require_operator
 from app.db.session import get_db
 from app.models.alert import AlertActionModel  # noqa: F401
-from app.models.user import UserModel
 from app.repositories.alert_repository import AlertRepository
 from app.schemas.alert import (
     AcknowledgeAlertRequest,
@@ -20,6 +19,7 @@ from app.schemas.alert import (
     AlertStatus,
     UpdateAlertActionRequest,
 )
+from app.schemas.auth import CurrentUser
 from app.schemas.common import HazardType
 from app.services.alert_service import AlertNotFoundError, AlertService
 
@@ -61,7 +61,7 @@ def list_alerts(
 def acknowledge_alert(
     alert_id: str,
     payload: AcknowledgeAlertRequest | None = None,
-    user: UserModel = Depends(require_operator),
+    user: CurrentUser = Depends(require_operator),
     service: AlertService = Depends(get_alert_service),
 ) -> AlertActionRecord:
     """Acknowledge a system alert and record the operator identity."""
@@ -86,7 +86,7 @@ def acknowledge_alert(
 def update_alert_action(
     alert_id: str,
     payload: UpdateAlertActionRequest,
-    _user: UserModel = Depends(require_operator),
+    _user: CurrentUser = Depends(require_operator),
     service: AlertService = Depends(get_alert_service),
 ) -> AlertActionRecord:
     """Update operator action status and notes for a system alert."""

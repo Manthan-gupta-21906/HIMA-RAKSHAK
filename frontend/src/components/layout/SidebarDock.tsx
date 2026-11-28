@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "edit_note",
     allowedRoles: ["admin", "district_operator"],
   },
+  { to: "/alerts", label: "Alerts", icon: "notification_important" },
   { to: "/warnings", label: "Warnings", icon: "fact_check" },
   { to: "/sources", label: "Sources", icon: "sensors" },
   { to: "/replay", label: "Replay", icon: "history" },
